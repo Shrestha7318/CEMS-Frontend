@@ -12,13 +12,8 @@
       <StatCard label="Total Sensors" :value="summary?.sensorCount ?? '—'" :delta="0" caption="All registered" />
       <StatCard label="Active Alerts" :value="summary?.alerts ?? '—'" :delta="delta.alerts" caption="AQI > 100" />
     </div>
-
-    <ChartPlaceholder title="AQI (Last 24h)">
-      <template #controls>
-        <div class="text-xs text-gray-500">Data from mock API</div>
-        
-      </template>
-    </ChartPlaceholder>
+    <TimeseriesChart v-if="seriesData.length" title="Air Quality (Last 2 Days)" :data="seriesData"
+      :metrics="['aqi', 'pm25', 'pm10']" />
 
     <div class="space-y-3">
       <h2 class="font-semibold">Recent Readings</h2>
@@ -38,17 +33,13 @@ import TimeseriesChart from '@/components/TimeseriesChart.vue'
 
 const summary = ref(null)
 const delta = ref({ aqi: 4, alerts: -12, online: 3 })
+const seriesData = ref([])
 
-onMounted(async () => {
-  summary.value = await api.getSummary()
-})
 
 onMounted(async () => {
   const sensors = await api.getSensors('')
   if (sensors.length) {
-    seriesData.value = await api.getSensorTimeseries(sensors[0].id, { period: '2d', interval: '5m' })
+    seriesData.value = await api.getSensorTimeseries(sensors[1].id, { period: '2d', interval: '5m' })
   }
 })
 </script>
-
-

@@ -15,12 +15,8 @@
       <StatCard label="Temp" :value="device.temp" unit="°C" />
     </div>
 
-    <ChartPlaceholder title="Timeseries (24h)">
-      <template #controls>
-        <TimeseriesChart v-if="seriesData.length" title="Timeseries (Last 2 Days, 5-min)" :data="seriesData"
-          :metrics="['pm25', 'pm10', 'aqi']" />
-      </template>
-    </ChartPlaceholder>
+    <TimeseriesChart v-if="seriesData.length" title="Timeseries (Last 2 Days, 5-min)" :data="seriesData"
+          :metrics="['opm25', 'pm10', 'aqi']" />
 
     <div class="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4">
       <h3 class="font-semibold mb-2">Metadata</h3>
@@ -41,7 +37,6 @@ import { ref, watchEffect } from 'vue'
 import { useRoute } from 'vue-router'
 import { api } from '@/services/api'
 import StatCard from '@/components/StatCard.vue'
-import ChartPlaceholder from '@/components/ChartPlaceholder.vue'
 import TimeseriesChart from '@/components/TimeseriesChart.vue'
 
 const route = useRoute()
