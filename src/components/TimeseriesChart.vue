@@ -48,7 +48,7 @@ const series = computed(() =>
         name: metricLabels[key] || key,
         type: 'line',
         showSymbol: false,
-        smooth: true,
+        smooth: false,
         sampling: 'lttb',
         data: props.data.map(d => d[key] ?? null)
     }))

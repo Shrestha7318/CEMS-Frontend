@@ -1,5 +1,5 @@
 <template>
-  <section class="space-y-6">
+  <section class="space-y-6 pb-20 px-6">
     <div class="flex items-baseline justify-between">
       <h1 class="text-2xl font-semibold">Dashboard</h1>
       <RouterLink to="/devices" class="text-sm hover:underline text-emerald-600">See all devices →</RouterLink>
@@ -26,7 +26,6 @@
 import { ref, onMounted } from 'vue'
 import { api } from '@/services/api'
 import StatCard from '@/components/StatCard.vue'
-import ChartPlaceholder from '@/components/ChartPlaceholder.vue'
 import SensorTable from '@/components/SensorTable.vue'
 import TimeseriesChart from '@/components/TimeseriesChart.vue'
 

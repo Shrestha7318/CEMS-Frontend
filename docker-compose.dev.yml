@@ -1,0 +1,14 @@
+version: "3.9"
+services:
+  dev:
+    image: node:20-alpine
+    working_dir: /app
+    command: sh -c "npm ci && npm run dev -- --host 0.0.0.0 --port 5173"
+    ports:
+      - "5173:5173"
+    volumes:
+      - .:/app:delegated
+      - /app/node_modules
+    environment:
+      VITE_API_BASE_URL: "https://api.example.com"
+      VITE_USE_MOCK: "true"
