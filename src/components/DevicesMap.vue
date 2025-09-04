@@ -26,9 +26,10 @@
 <script setup>
 import { LMap, LTileLayer, LMarker, LPopup } from "@vue-leaflet/vue-leaflet"
 import "leaflet/dist/leaflet.css"
+
 const props = defineProps({
   devices: { type: Array, default: () => [] },
-  center: { type: Array, default: () => [32.7767, -96.7970] }, // fallback center
+  center: { type: Array, default: () => [27.8767, -97.3231] }, // fallback center
   zoom: { type: Number, default: 10 }
 });
 </script>

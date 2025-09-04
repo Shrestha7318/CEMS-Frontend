@@ -26,14 +26,14 @@ const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
 
 // ---------- sensor catalog ----------
 export const sensors = [
-    { id: 'S-001', name: 'Downtown Station', lat: 32.7767, lon: -96.7970, status: 'online' },
-    { id: 'S-002', name: 'Uptown Station', lat: 32.8140, lon: -96.9489, status: 'online' },
-    { id: 'S-003', name: 'Riverside Station', lat: 32.7555, lon: -97.3308, status: 'online' },
-    { id: 'S-004', name: 'Industrial Park', lat: 32.9098, lon: -96.8353, status: 'warning' },
-    { id: 'S-005', name: 'Airport Station', lat: 32.8998, lon: -97.0403, status: 'offline' },
-    { id: 'S-006', name: 'Suburb North', lat: 33.0198, lon: -96.6989, status: 'online' },
-    { id: 'S-007', name: 'Suburb South', lat: 32.6400, lon: -96.9100, status: 'online' },
-    { id: 'S-008', name: 'Lakeside Station', lat: 32.9884, lon: -96.9078, status: 'online' },
+    { id: 'S-001', name: 'Downtown Corpus Christi', lat: 27.8006, lon: -97.3964, status: 'online' },
+    { id: 'S-002', name: 'Portland Station', lat: 27.8767, lon: -97.3231, status: 'online' },
+    { id: 'S-003', name: 'Ingleside Station', lat: 27.8760, lon: -97.2110, status: 'online' },
+    { id: 'S-004', name: 'Aransas Pass Station', lat: 27.9095, lon: -97.1500, status: 'warning' },
+    { id: 'S-005', name: 'Port Aransas Station', lat: 27.8339, lon: -97.0611, status: 'offline' },
+    { id: 'S-006', name: 'Rockport Station', lat: 28.0206, lon: -97.0544, status: 'online' },
+    { id: 'S-007', name: 'Robstown Station', lat: 27.7903, lon: -97.6686, status: 'online' },
+    { id: 'S-008', name: 'Sinton Station', lat: 28.0369, lon: -97.5097, status: 'online' },
 ];
 
 // ---------- timeseries generators ----------

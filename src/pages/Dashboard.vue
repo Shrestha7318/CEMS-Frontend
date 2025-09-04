@@ -12,8 +12,10 @@
       <StatCard label="Total Sensors" :value="summary?.sensorCount ?? '—'" :delta="0" caption="All registered" />
       <StatCard label="Active Alerts" :value="summary?.alerts ?? '—'" :delta="delta.alerts" caption="AQI > 100" />
     </div>
-    <TimeseriesChart v-if="seriesData.length" title="Air Quality (Last 2 Days)" :data="seriesData"
-      :metrics="['aqi', 'pm25', 'pm10']" />
+    <!-- <TimeseriesChart v-if="seriesData.length" title="Air Quality (Last 2 Days)" :data="seriesData"
+      :metrics="['aqi', 'pm25', 'pm10']" /> -->
+    <DevicesMap :devices="devices" />
+    <ComparePanel />
 
     <div class="space-y-3">
       <h2 class="font-semibold">Recent Readings</h2>
@@ -23,22 +25,29 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watchEffect} from 'vue'
 import { api } from '@/services/api'
 import StatCard from '@/components/StatCard.vue'
 import SensorTable from '@/components/SensorTable.vue'
 import TimeseriesChart from '@/components/TimeseriesChart.vue'
+import DevicesMap from '@/components/DevicesMap.vue'
+import ComparePanel from '@/components/ComparePanel.vue'
+
 
 
 const summary = ref(null)
 const delta = ref({ aqi: 4, alerts: -12, online: 3 })
 const seriesData = ref([])
-
+const devices = ref([])
 
 onMounted(async () => {
+  devices.value = await api.getSensors('')
   const sensors = await api.getSensors('')
   if (sensors.length) {
     seriesData.value = await api.getSensorTimeseries(sensors[1].id, { period: '2d', interval: '5m' })
   }
 })
+
+
+
 </script>

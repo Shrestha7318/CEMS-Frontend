@@ -24,7 +24,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <!-- remove the outer :class="{ dark: isDark }" wrapper -->
+
   <div class="min-h-screen bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-100 pt-8 px-6 lg:px-12">
 
     <Navbar :dark="isDark" @toggleDark="toggleDark" />
@@ -38,12 +38,12 @@ onMounted(() => {
       <div class="text-lg font-semibold">🌍 CEMS Project</div>
       <div class="flex space-x-6 mt-4 md:mt-0">
         <a href="#" class="hover:text-blue-600 transition">About</a>
-        <a href="#" class="hover:text-blue-600 transition">Privacy</a>
+        <!-- <a href="#" class="hover:text-blue-600 transition">Privacy</a> -->
         <a href="#" class="hover:text-blue-600 transition">Contact</a>
       </div>
     </div>
     <div class="text-center py-4 text-sm border-t border-gray-300 dark:border-gray-700 pb-20">
-      © 2025 CEMS. All rights reserved.
+       © 2025 CEMS.<!-- All rights reserved. -->
     </div>
   </footer>
 </template>

@@ -49,7 +49,7 @@ defineEmits(['toggleDark'])
           <RouterLink to="/" class="text-gray-500 hover:text-blue-600 transition">Dashboard</RouterLink>
           <RouterLink to="/devices" class="text-gray-500 hover:text-blue-600 transition">Devices</RouterLink>
           <a href="#" class="text-gray-500 hover:text-blue-600 transition cursor-not-allowed">Reports</a>
-          <a href="#" class="text-gray-500 hover:text-blue-600 transition cursor-not-allowed">Admin</a>
+          <!-- <a href="#" class="text-gray-500 hover:text-blue-600 transition cursor-not-allowed">Admin</a> -->
           <a href="#" class="text-gray-500 hover:text-blue-600 transition cursor-not-allowed">Alerts</a>
         </div>
 

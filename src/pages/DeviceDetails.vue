@@ -15,8 +15,9 @@
       <StatCard label="Temp" :value="device.temp" unit="°C" />
     </div>
 
-    <TimeseriesChart v-if="seriesData.length" title="Timeseries (Last 2 Days, 5-min)" :data="seriesData"
-          :metrics="['opm25', 'pm10', 'aqi']" />
+    <!-- <TimeseriesChart v-if="seriesData.length" title="Timeseries" :data="seriesData"
+          :metrics="['opm25', 'pm10', 'aqi']" /> -->
+    <ComparePanel v-if="seriesData.length" :data="seriesData" />
 
     <div class="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4">
       <h3 class="font-semibold mb-2">Metadata</h3>
@@ -38,6 +39,8 @@ import { useRoute } from 'vue-router'
 import { api } from '@/services/api'
 import StatCard from '@/components/StatCard.vue'
 import TimeseriesChart from '@/components/TimeseriesChart.vue'
+import ComparePanel from '@/components/ComparePanel.vue'
+
 
 const route = useRoute()
 const device = ref(null)
