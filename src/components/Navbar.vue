@@ -40,13 +40,15 @@ defineEmits(['toggleDark'])
     <div class="max-w-7xl mx-auto px-6 lg:px-12">
       <div class="flex justify-between items-center h-16">
         <!-- Logo -->
-        <div class="text-2xl font-bold text-blue-600 cursor-pointer">
+                <RouterLink to="/" class="text-2xl font-bold text-blue-600 cursor-pointer">
           CEMS
-        </div>
+        </RouterLink>
 
         <!-- Desktop Menu -->
         <div class="hidden md:flex space-x-8">
-          <RouterLink to="/" class="text-gray-500 hover:text-blue-600 transition">Dashboard</RouterLink>
+          <RouterLink to="/dashboard" class="text-gray-500 hover:text-blue-600 transition">
+            Dashboard
+          </RouterLink>
           <RouterLink to="/devices" class="text-gray-500 hover:text-blue-600 transition">Devices</RouterLink>
           <a href="#" class="text-gray-500 hover:text-blue-600 transition cursor-not-allowed">Reports</a>
           <!-- <a href="#" class="text-gray-500 hover:text-blue-600 transition cursor-not-allowed">Admin</a> -->

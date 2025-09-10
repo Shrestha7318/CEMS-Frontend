@@ -1,5 +1,7 @@
 import { createRouter, createWebHistory } from "vue-router";
 
+const HomePage = () =>
+    import ("@/pages/HomePage.vue");
 const Dashboard = () =>
     import ("@/pages/Dashboard.vue");
 const Devices = () =>
@@ -10,7 +12,9 @@ const NotFound = () =>
     import ("@/pages/NotFound.vue");
 
 const routes = [
-    { path: "/", name: "Dashboard", component: Dashboard },
+    { path: '/', name: 'Home', component: HomePage },
+    { path: "/dashboard", name: "Dashboard", component: Dashboard },
+
     { path: "/devices", name: "Devices", component: Devices },
     {
         path: "/devices/:id",
