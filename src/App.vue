@@ -1,9 +1,13 @@
 <script setup>
-import { ref, onMounted } from 'vue'
-import { RouterView } from 'vue-router'
+import { ref, onMounted, computed } from 'vue'
+import { useRoute } from 'vue-router'
 import Navbar from '@/components/Navbar.vue'
 
 const isDark = ref(false)
+const route = useRoute()
+
+// Treat "/" as Home; if you named the route 'home', this also covers it.
+const isHome = computed(() => route.path === '/' || route.name === 'home')
 
 const applyTheme = () => {
   const root = document.documentElement // <html>
@@ -24,26 +28,31 @@ onMounted(() => {
 </script>
 
 <template>
-
-  <div class="min-h-screen bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-100 pt-8 px-6 lg:px-12">
-
+  <!-- Page shell -->
+  <div class="min-h-screen bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-100">
+    <!-- Fixed navbar (can be transparent over Home hero if you applied that Navbar change) -->
     <Navbar :dark="isDark" @toggleDark="toggleDark" />
-    <main class="container py-6">
+
+    <!-- Main area:
+         - Home: no container or padding so the hero can be full-bleed edge-to-edge
+         - Other pages: centered container with spacing below the fixed navbar
+    -->
+    <main :class="isHome ? '' : 'container mx-auto px-6 lg:px-12 pt-24 pb-10'">
       <RouterView />
     </main>
   </div>
+
+  <!-- Footer (boxed like the inner pages) -->
   <footer class="mt-20 bg-transparent text-gray-600 dark:text-gray-300">
-    
     <div class="max-w-7xl mx-auto px-6 py-10 flex flex-col md:flex-row justify-between items-center">
       <div class="text-lg font-semibold">🌍 CEMS Project</div>
       <div class="flex space-x-6 mt-4 md:mt-0">
         <a href="#" class="hover:text-blue-600 transition">About</a>
-        <!-- <a href="#" class="hover:text-blue-600 transition">Privacy</a> -->
         <a href="#" class="hover:text-blue-600 transition">Contact</a>
       </div>
     </div>
     <div class="text-center py-4 text-sm border-t border-gray-300 dark:border-gray-700 pb-20">
-       © 2025 CEMS.<!-- All rights reserved. -->
+      © 2025 CEMS.
     </div>
   </footer>
 </template>

@@ -35,77 +35,109 @@
 defineProps({ dark: Boolean })
 defineEmits(['toggleDark'])
 </script> -->
-<template>
-  <nav class="dark:bg-gray-900/80 sticky bg-white shadow-md fixed w-full top-0 left-0 z-50">
-    <div class="max-w-7xl mx-auto px-6 lg:px-12">
-      <div class="flex justify-between items-center h-16">
-        <!-- Logo -->
-                <RouterLink to="/" class="text-2xl font-bold text-blue-600 cursor-pointer">
-          CEMS
-        </RouterLink>
+<script setup>
+import { ref, onMounted, onBeforeUnmount } from 'vue'
 
-        <!-- Desktop Menu -->
+const isOpen = ref(false)
+const scrolled = ref(false)
+defineProps({ dark: Boolean })
+
+let io
+
+function fallbackOnScroll() {
+  // fallback if sentinel not found
+  scrolled.value = window.scrollY > window.innerHeight * 0.6
+}
+
+onMounted(() => {
+  const sentinel = document.getElementById('nav-sentinel')
+  if (sentinel && 'IntersectionObserver' in window) {
+    io = new IntersectionObserver(
+      (entries) => {
+        const e = entries[0]
+        // When the sentinel is visible => still within hero => transparent nav
+        // When it leaves the viewport => hero ended => solid nav
+        scrolled.value = !e.isIntersecting
+      },
+      {
+        // account for navbar height so the switch happens when the hero ends under the bar
+        root: null,
+        rootMargin: '-64px 0px 0px 0px', // adjust if your nav height changes
+        threshold: 0,
+      }
+    )
+    io.observe(sentinel)
+  } else {
+    // Fallback behavior
+    fallbackOnScroll()
+    window.addEventListener('scroll', fallbackOnScroll, { passive: true })
+  }
+})
+
+onBeforeUnmount(() => {
+  if (io) io.disconnect()
+  window.removeEventListener('scroll', fallbackOnScroll)
+})
+</script>
+
+<template>
+  <nav
+    class="fixed inset-x-0 top-0 z-50 transition-colors duration-300"
+    :class="scrolled
+      ? 'bg-white/85 dark:bg-gray-900/70 backdrop-blur shadow-sm'
+      : 'bg-transparent'"
+  >
+    <div class="mx-auto max-w-7xl px-6 lg:px-12">
+      <div class="flex h-16 items-center justify-between">
+        <RouterLink
+          to="/"
+          class="text-2xl font-bold transition"
+          :class="scrolled ? 'text-blue-600' : 'text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.6)]'"
+        >CEMS</RouterLink>
+
         <div class="hidden md:flex space-x-8">
-          <RouterLink to="/dashboard" class="text-gray-500 hover:text-blue-600 transition">
-            Dashboard
-          </RouterLink>
-          <RouterLink to="/devices" class="text-gray-500 hover:text-blue-600 transition">Devices</RouterLink>
-          <a href="#" class="text-gray-500 hover:text-blue-600 transition cursor-not-allowed">Reports</a>
-          <!-- <a href="#" class="text-gray-500 hover:text-blue-600 transition cursor-not-allowed">Admin</a> -->
-          <a href="#" class="text-gray-500 hover:text-blue-600 transition cursor-not-allowed">Alerts</a>
+          <RouterLink :class="scrolled ? 'text-gray-700 hover:text-blue-600' : 'text-white/85 hover:text-white'" to="/dashboard">Dashboard</RouterLink>
+          <RouterLink :class="scrolled ? 'text-gray-700 hover:text-blue-600' : 'text-white/85 hover:text-white'" to="/devices">Devices</RouterLink>
+          <span :class="scrolled ? 'text-gray-400' : 'text-white/60'">Reports</span>
+          <span :class="scrolled ? 'text-gray-400' : 'text-white/60'">Alerts</span>
         </div>
 
-        <button @click="$emit('toggleDark')"
-          class="relative w-14 h-7 flex items-center bg-gray-300 dark:bg-gray-700 rounded-full p-1 transition-colors duration-300"
-          :title="dark ? 'Switch to light' : 'Switch to dark'">
-
-          <!-- Sun & Moon icons -->
-          <span class="absolute left-1 text-yellow-400 text-sm">☀️</span>
+        <button
+          @click="$emit('toggleDark')"
+          class="relative w-14 h-7 flex items-center rounded-full p-1 transition"
+          :class="scrolled ? 'bg-gray-300 dark:bg-gray-700' : 'bg-white/25 backdrop-blur'"
+          :title="dark ? 'Switch to light' : 'Switch to dark'"
+        >
+          <span class="absolute left-1 text-yellow-300 text-sm">☀️</span>
           <span class="absolute right-1 text-gray-200 text-sm">🌙</span>
-
-          <!-- Sliding circle -->
-          <div
-            class="w-6 h-6 bg-white dark:bg-gray-900 rounded-full shadow-md transform transition-transform duration-300"
-            :class="dark ? 'translate-x-7' : 'translate-x-0'">
-          </div>
+          <div class="w-6 h-6 bg-white dark:bg-gray-900 rounded-full shadow-md transform transition-transform duration-300"
+               :class="dark ? 'translate-x-7' : 'translate-x-0'"></div>
         </button>
-        <!-- CTA Button -->
+
         <div class="hidden md:flex">
           <button
-            class="bg-blue-600 text-white px-4 py-2 rounded-xl shadow hover:bg-blue-700 transition cursor-not-allowed">
-            Login
-          </button>
+            class="px-4 py-2 rounded-xl transition"
+            :class="scrolled ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-white/20 text-white hover:bg-white/30 backdrop-blur'"
+          >Login</button>
         </div>
 
-        <!-- Mobile Menu Button -->
         <div class="md:hidden flex items-center">
           <button @click="isOpen = !isOpen">
-            <svg class="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+            <svg class="w-6 h-6" :class="scrolled ? 'text-gray-700' : 'text-white'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M4 6h16M4 12h16M4 18h16"/>
             </svg>
           </button>
         </div>
       </div>
     </div>
 
-    <!-- Mobile Dropdown -->
-    <div v-if="isOpen" class="md:hidden bg-white shadow-md">
-      <RouterLink to="/" class="block px-6 py-3 text-gray-700 hover:bg-gray-100">Dashboard</RouterLink>
-      <RouterLink to="/devices" class="block px-6 py-3 text-gray-700 hover:bg-gray-100">Devices</RouterLink>
-      <a href="#" class="block px-6 py-3 text-gray-700 hover:bg-gray-100 cursor-not-allowed">Reports</a>
-      <a href="#" class="block px-6 py-3 text-gray-700 hover:bg-gray-100 cursor-not-allowed">Admin</a>
-      <button class="w-full text-left px-6 py-3 bg-blue-600 text-white hover:bg-blue-700 cursor-not-allowed">
-        Login
-      </button>
+    <div v-if="isOpen" class="md:hidden bg-white/90 dark:bg-gray-900/90 backdrop-blur shadow-md">
+      <RouterLink to="/dashboard" class="block px-6 py-3 text-gray-800 dark:text-gray-100 hover:bg-gray-100/60 dark:hover:bg-gray-800/60">Dashboard</RouterLink>
+      <RouterLink to="/devices" class="block px-6 py-3 text-gray-800 dark:text-gray-100 hover:bg-gray-100/60 dark:hover:bg-gray-800/60">Devices</RouterLink>
+      <span class="block px-6 py-3 text-gray-400 cursor-not-allowed">Reports</span>
+      <span class="block px-6 py-3 text-gray-400 cursor-not-allowed">Alerts</span>
+      <button class="w-full text-left px-6 py-3 bg-blue-600 text-white hover:bg-blue-700">Login</button>
     </div>
   </nav>
 </template>
-
-<script setup>
-import { ref } from 'vue'
-const isOpen = ref(false)
-
-defineProps({
-  dark: Boolean
-})
-</script>

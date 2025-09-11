@@ -38,7 +38,6 @@ import { ref, watchEffect } from 'vue'
 import { useRoute } from 'vue-router'
 import { api } from '@/services/api'
 import StatCard from '@/components/StatCard.vue'
-import TimeseriesChart from '@/components/TimeseriesChart.vue'
 import ComparePanel from '@/components/ComparePanel.vue'
 
 

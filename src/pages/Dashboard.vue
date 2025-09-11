@@ -25,11 +25,11 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watchEffect} from 'vue'
+import { ref, onMounted} from 'vue'
 import { api } from '@/services/api'
 import StatCard from '@/components/StatCard.vue'
 import SensorTable from '@/components/SensorTable.vue'
-import TimeseriesChart from '@/components/TimeseriesChart.vue'
+
 import DevicesMap from '@/components/DevicesMap.vue'
 import ComparePanel from '@/components/ComparePanel.vue'
 

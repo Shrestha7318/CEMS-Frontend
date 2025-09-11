@@ -24,8 +24,6 @@ a:hover {
 
 body {
   margin: 0;
-  display: flex;
-  place-items: center;
   min-width: 320px;
   min-height: 100vh;
 }
@@ -59,10 +57,10 @@ button:focus-visible {
 }
 
 #app {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  text-align: initial;
 }
 
 @media (prefers-color-scheme: light) {
@@ -76,4 +74,19 @@ button:focus-visible {
   button {
     background-color: #f9f9f9;
   }
+html, body { overflow-x: hidden; }
+.bleed {
+  position: relative;
+  display: block;
+  width: 100vw;
+  left: 50%;
+  right: 50%;
+  /* both calc syntaxes below are widely compatible; pick one */
+  /* margin-left: calc(-50vw);
+  margin-right: calc(-50vw); */
+
+  margin-left: calc(50% - 50vw);
+  margin-right: calc(50% - 50vw);
+ 
+}
 }
