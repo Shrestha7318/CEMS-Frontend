@@ -5,36 +5,26 @@
       <RouterLink to="/devices" class="text-sm hover:underline text-emerald-600">See all devices →</RouterLink>
     </div>
 
-    <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <!-- <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
       <StatCard label="Average AQI" :value="summary?.avgAQI ?? '—'" unit="" :delta="delta.aqi" caption="24h change" />
       <StatCard label="Sensors Online" :value="summary?.online ?? '—'" :delta="delta.online" caption="Up since yesterday" />
       <StatCard label="Total Sensors" :value="summary?.sensorCount ?? '—'" :delta="0" caption="All registered" />
       <StatCard label="Active Alerts" :value="summary?.alerts ?? '—'" :delta="delta.alerts" caption="AQI > 100" />
-    </div>
-
+    </div> -->
+    <p class ="text-sm text-gray-500 dark:text-gray-400 mb-3">Pan and zoom the map to explore device locations. Click a marker for more details.</p>
     <DevicesMap :devices="devices" />
 
     <!-- Compare section -->
     <div class="space-y-4">
 
       <div class="space-y-4">
-        <ComparePanel
-          v-for="(p, idx) in comparePanels"
-          :key="p.uid"
-          :uid="p.uid"
-          :display-id="idx + 1"                
-          :devices="devices"
-          :can-remove="comparePanels.length > 1 && idx > 0"  
-          @remove="removePanel"
-        />
+        <ComparePanel v-for="(p, idx) in comparePanels" :key="p.uid" :uid="p.uid" :display-id="idx + 1"
+          :devices="devices" :can-remove="comparePanels.length > 1 && idx > 0" @remove="removePanel" />
       </div>
 
       <div class="pt-2">
-        <button
-          type="button"
-          @click="addPanel"
-          class="inline-flex items-center gap-2 rounded-xl px-3 py-2 border border-emerald-600 text-emerald-700 hover:bg-emerald-50 dark:text-emerald-400 dark:border-emerald-500 dark:hover:bg-emerald-900/20 text-sm"
-        >
+        <button type="button" @click="addPanel"
+          class="inline-flex items-center gap-2 rounded-xl px-3 py-2 border border-emerald-600 text-emerald-700 hover:bg-emerald-50 dark:text-emerald-400 dark:border-emerald-500 dark:hover:bg-emerald-900/20 text-sm">
           <span class="text-lg leading-none">＋</span>
           Add comparison
         </button>
@@ -51,13 +41,13 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { api } from '@/services/api'
-import StatCard from '@/components/StatCard.vue'
+// import StatCard from '@/components/StatCard.vue'
 import SensorTable from '@/components/SensorTable.vue'
 import DevicesMap from '@/components/DevicesMap.vue'
 import ComparePanel from '@/components/ComparePanel.vue'
 
-const summary = ref(null)
-const delta = ref({ aqi: 4, alerts: -12, online: 3 })
+// const summary = ref(null)
+// const delta = ref({ aqi: 4, alerts: -12, online: 3 })
 const seriesData = ref([])
 const devices = ref([])
 

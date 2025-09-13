@@ -61,7 +61,7 @@
             </td>
             <td class="px-4 py-3">
               <span :title="s.lastSeen ? new Date(s.lastSeen).toLocaleString() : ''">
-                {{ s.lastSeenUtc ? `${s.lastSeenUtc} UTC` : '—' }}
+                {{ s.lastSeenUtc ? `${s.lastSeenUtc} CST` : '—' }}
               </span>
             </td>
             <td class="px-4 py-3">
