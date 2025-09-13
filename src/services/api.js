@@ -1,4 +1,4 @@
-// src/services/api.js
+
 import axios from "axios"
 import { MAP_DEVICES, MAP_SITES_V6 } from "@/constants/mapSites"
 
@@ -47,11 +47,19 @@ export function toUtcSql(d) {
 /** Parse "YYYY-MM-DD HH:mm:ss" (UTC) to ms timestamp */
 export function parseUtcSql(s) {
   if (!s || typeof s !== "string") return NaN
-  const [d, t] = s.trim().split(" ")
+
+  // 1) Try native ISO parser first (handles ...T...Z, fractional seconds, etc.)
+  const iso = Date.parse(s)
+  if (Number.isFinite(iso)) return iso
+
+  // 2) Fallback: "YYYY-MM-DD HH:mm:ss" (UTC)
+  const [d, t] = s.trim().split(/[ T]/)   // allow either space or 'T'
   if (!d || !t) return NaN
   const [Y, M, D] = d.split("-").map(Number)
-  const [h, m, sec] = t.split(":").map(Number)
-  return Date.UTC(Y, (M || 1) - 1, D || 1, h || 0, m || 0, sec || 0)
+  const [h, m, secRaw] = t.split(":")
+  const [sInt] = String(secRaw ?? "0").split(".")   // strip any .sss
+  const [hh, mm, ss] = [Number(h), Number(m), Number(sInt)]
+  return Date.UTC(Y, (M || 1) - 1, D || 1, hh || 0, mm || 0, ss || 0)
 }
 
 /** Last N hours as [start_utc_sql, end_utc_sql] */
@@ -66,20 +74,38 @@ function mapTHRow(r) {
   const rep = parseUtcSql(r.ReportedTimeUTC)
   const rec = parseUtcSql(r.ReceivedTime)
   const lastSeenMs = Number.isFinite(rep) || Number.isFinite(rec) ? Math.max(rep || 0, rec || 0) : null
+
+  // Canonical values
+  const temperature   = r.Temperature   != null ? Number(r.Temperature)   : null
+  const humidity      = r.Humidity      != null ? Number(r.Humidity)      : null
+  const illumination  = r.Illumination  != null ? Number(r.Illumination)  : null
+  const noise         = r.Noise         != null ? Number(r.Noise)         : null
+  const pm25          = r.PM2_5         != null ? Number(r.PM2_5)         : null
+  const pm10          = r.PM10          != null ? Number(r.PM10)          : null
+
   return {
     site: r.SiteName,
-    humidity: r.Humidity != null ? Number(r.Humidity) : null,
-    temperature: r.Temperature != null ? Number(r.Temperature) : null,
-    noise: r.Noise != null ? Number(r.Noise) : null,
-    pm25: r.PM2_5 != null ? Number(r.PM2_5) : null,
-    pm10: r.PM10 != null ? Number(r.PM10) : null,
-    illumination: r.Illumination != null ? Number(r.Illumination) : null,
+
+    // Canonical keys (use these everywhere going forward)
+    temperature,       // °C
+    humidity,          // %
+    illumination,      // lux (or native unit)
+    noise,             // dB
+    pm25,              // µg/m³
+    pm10,              // µg/m³
+
+    // Aliases to keep existing UI working
+    tempC: temperature,
+    rh: humidity,
+    illum: illumination,
+
     reportedUTC: r.ReportedTimeUTC,
     receivedUTC: r.ReceivedTime,
     ts: rep,
     lastSeenMs,
   }
 }
+
 function mapVOCRow(r) {
   const rep = parseUtcSql(r.ReportedTimeUTC)
   const rec = parseUtcSql(r.ReceivedTime)
@@ -229,5 +255,5 @@ export const api = USE_MOCK
       getMapDevices: () => MAP_DEVICES,
   }
     
-  //export the constant in case you want to import directly in a map component
+
 export { MAP_DEVICES, MAP_SITES_V6 }

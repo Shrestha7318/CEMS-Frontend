@@ -20,10 +20,7 @@
 </template>
 
 <script setup>
-const props = defineProps({
-  devices: { type: Array, default: () => [] },
-  modelValue: { type: Array, default: () => [] }
-})
+
 const emit = defineEmits(['update:modelValue'])
 
 function onChange(e) {

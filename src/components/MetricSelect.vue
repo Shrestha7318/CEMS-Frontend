@@ -12,14 +12,8 @@
 </template>
 
 <script setup>
-const props = defineProps({ modelValue: { type: String, default: 'aqi' } })
+import { METRIC_OPTIONS } from '@/constants/metrics'
+const props = defineProps({ modelValue: { type: String, default: 'pm25' } })
 const emit = defineEmits(['update:modelValue'])
-const options = [
-  { key: 'aqi', label: 'AQI' },
-  { key: 'pm25', label: 'PM2.5 (µg/m³)' },
-  { key: 'pm10', label: 'PM10 (µg/m³)' },
-  { key: 'co2', label: 'CO₂ (ppm)' },
-  { key: 'temp', label: 'Temperature (°C)' },
-  { key: 'humidity', label: 'Humidity (%)' },
-]
+const options = METRIC_OPTIONS
 </script>

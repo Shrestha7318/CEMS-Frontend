@@ -74,7 +74,7 @@ button:focus-visible {
   button {
     background-color: #f9f9f9;
   }
-html, body { overflow-x: hidden; }
+html, body { overflow-x: hidden; scroll-padding-top: 72px;}
 .bleed {
   position: relative;
   display: block;
@@ -82,11 +82,11 @@ html, body { overflow-x: hidden; }
   left: 50%;
   right: 50%;
   /* both calc syntaxes below are widely compatible; pick one */
-  /* margin-left: calc(-50vw);
-  margin-right: calc(-50vw); */
-
+  margin-left: calc(-50vw);
+  margin-right: calc(-50vw);
+  /* alternative (uncomment if you prefer):
   margin-left: calc(50% - 50vw);
   margin-right: calc(50% - 50vw);
- 
+  */
 }
 }
