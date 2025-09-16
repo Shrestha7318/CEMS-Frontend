@@ -5,19 +5,18 @@
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         attribution="&copy; <a href='https://www.openstreetmap.org/'>OpenStreetMap</a>"
       />
-
-      <!-- One pin per MAP_DEVICES entry -->
       <l-marker v-for="p in pins" :key="p.id" :lat-lng="[p.lat, p.lon]">
         <l-popup>
           <div class="space-y-2">
             <div class="font-semibold">{{ p.name }}</div>
+           
             <router-link
-              :to="`/devices/${encodeURIComponent(p.id)}`"
+              :to="{ name: 'devices', query: { id: p.id } }"
               class="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl
                      border border-gray-300 dark:border-gray-700
                      bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800
                      text-xs">
-              Details →
+              Open → 
             </router-link>
           </div>
         </l-popup>

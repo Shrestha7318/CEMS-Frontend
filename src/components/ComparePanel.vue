@@ -1,9 +1,12 @@
 <template>
   <section class="space-y-4">
     <!-- Header -->
+
     <div class="flex items-center justify-between">
+      <h1></h1>
       <button v-if="canRemove" class="text-rose-600 hover:text-rose-700 text-sm" @click="$emit('remove', uid)"
         aria-label="Remove this comparison panel">
+
         Remove
       </button>
     </div>
@@ -42,12 +45,13 @@ import { api } from '@/services/api'
 import CompareChart from '@/components/CompareChart.vue'
 import DeviceMultiDropdown from '@/components/DeviceMultiDropdown.vue'
 import MetricDropdown from '@/components/MetricDropdown.vue'
+import { MAP_DEVICES } from '@/constants/mapSites.js'
 
 /** ------------ Props & Emits ------------ */
 const props = defineProps({
   uid: { type: [Number, String], required: true },
   displayId: { type: Number, required: true },
-  devicesProp: { type: Array, default: () => [] }, 
+  devicesProp: { type: Array, default: () => [] },
   canRemove: { type: Boolean, default: true },
 })
 defineEmits(['remove'])
@@ -73,19 +77,29 @@ const VOC_METRICS = new Set(['voc', 'o3', 'so2', 'no2'])
 /** Filter device options by metric group, even if parent passed devices */
 const deviceOptions = computed(() => {
   const src = (props.devicesProp?.length ? props.devicesProp : internalDevices.value) ?? []
-  const normalized = src.map(d => (typeof d === 'string' ? { id: d, name: d } : d))
-  const m = metricKey.value
+  // normalize shape and inject friendly names
+  const normalized = src.map(d => {
+    const id = typeof d === 'string' ? d : d.id
+    return { id, name: labelForSite(id) }
+  })
 
+  const m = metricKey.value
   const want = TH_METRICS.has(m) ? '-TH-' : VOC_METRICS.has(m) ? '-VOC-' : null
   if (!want) return normalized
-
   const subset = normalized.filter(d => String(d.id).includes(want))
-  return subset.length ? subset : normalized  // fallback if no tagged IDs exist
+  return subset.length ? subset : normalized
 })
 
 
 const selectedDeviceIds = ref([]) // ['UTIS0001-TH-V6_1', ...]
 const seriesByDevice = ref({})
+
+const ID_TO_LOCATION = Object.fromEntries(
+  MAP_DEVICES.flatMap(d => [
+    [d.sites.th, d.name],
+    [d.sites.voc, d.name],
+  ])
+)
 
 /** ------------ Lifecycle ------------ */
 onMounted(async () => {
@@ -99,6 +113,12 @@ watch(metricKey, async () => {
 })
 watch(selectedDeviceIds, reload)
 watch(range, reload) // re-query when range changes
+
+function labelForSite(siteId) {
+  const base = ID_TO_LOCATION[siteId] || siteId
+  const type = siteId.includes('-TH-') ? ' (TH)' : siteId.includes('-VOC-') ? ' (VOC)' : ''
+  return base + type
+}
 
 /** ------------ Helpers ------------ */
 function aqiFromPM25(c) {
@@ -141,13 +161,12 @@ async function refreshDeviceList(resetSelection = false) {
   if (!filtered.length) filtered = [...sites]
 
   if (!props.devicesProp?.length) {
-    internalDevices.value = filtered.map(id => ({ id, name: id }))
+    internalDevices.value = filtered.map(id => ({ id, name: labelForSite(id) }))
   }
-
   if (resetSelection || !selectedDeviceIds.value.length) {
     const source = deviceOptions.value.length ? deviceOptions.value : internalDevices.value
     selectedDeviceIds.value = source.slice(0, 2).map(d => d.id)
-  } 
+  }
   else {
     // Keep user selection but coerce to correct group
     const coerced = coerceSelectionToMetric(selectedDeviceIds.value)
@@ -178,18 +197,24 @@ async function reload() {
     siteIds: ids,
     hours
   })
-
+// AQI special-case
+  let byId
   if (m === 'aqi') {
-    const mapped = {}
+    byId = {}
     for (const [site, rows] of Object.entries(raw || {})) {
-      mapped[site] = (rows || [])
+      byId[site] = (rows || [])
         .map(p => ({ ts: p.ts, value: aqiFromPM25(p.value) }))
         .filter(p => Number.isFinite(p.value))
     }
-    seriesByDevice.value = mapped
   } else {
-    seriesByDevice.value = raw || {}
+    byId = raw || {}
   }
+  // Remap keys from site ID → friendly label (e.g., "Ingleside on the Bay (TH)")
+  const labeled = {}
+  for (const [siteId, rows] of Object.entries(byId)) {
+    labeled[labelForSite(siteId)] = rows
+  }
+  seriesByDevice.value = labeled
 }
 
 /** Force chart rerender if metric/devices/range changes */

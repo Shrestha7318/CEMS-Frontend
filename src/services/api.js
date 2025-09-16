@@ -15,7 +15,7 @@ if (USE_MOCK) {
 // ---------- HTTP ----------
 const http = axios.create({
   baseURL: BASE_URL,
-  timeout: 15000,
+  timeout: 30000,
   paramsSerializer: {
     serialize: (params) =>
       Object.entries(params ?? {})

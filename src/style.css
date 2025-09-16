@@ -90,3 +90,23 @@ html, body { overflow-x: hidden; scroll-padding-top: 72px;}
   */
 }
 }
+
+.btn-line-primary {
+  @apply relative inline-block px-5 py-2 font-medium text-white;
+  border-bottom: 2px solid theme('colors.emerald.400');
+  transition: all 0.3s ease;
+}
+.btn-line-primary:hover {
+  color: theme('colors.emerald.300');
+  border-bottom-color: theme('colors.emerald.300');
+}
+
+.btn-line-ghost {
+  @apply relative inline-block px-5 py-2 font-medium text-white/90;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.4);
+  transition: all 0.3s ease;
+}
+.btn-line-ghost:hover {
+  color: white;
+  border-bottom-color: white;
+}

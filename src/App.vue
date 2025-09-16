@@ -33,7 +33,7 @@ onMounted(() => {
     <Navbar :dark="isDark" @toggleDark="toggleDark" />
 
     <!-- Main area:-->
-    <main :class="isHome ? '' : 'container mx-auto  w-[75%] pt-16 md:pt-[72px]'">
+    <main :class="isHome ? '' : 'container mx-auto  w-[80%] pt-16 md:pt-[72px]'">
       <RouterView />
     </main>
   </div>

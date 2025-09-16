@@ -3,7 +3,7 @@
     class="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-soft overflow-hidden">
     <!-- Top bar -->
     <div class="p-4 flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
-      <input v-model="search" type="text" placeholder="Search by ID or name..."
+      <input v-model="search" type="text" placeholder="Search by ID or location..."
         class="w-full sm:w-72 px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-transparent outline-none" />
       <div class="text-sm text-gray-500 dark:text-gray-400">Total: {{ filtered.length }}</div>
     </div>
@@ -34,8 +34,16 @@
         </thead>
         <tbody>
           <tr v-for="s in filtered" :key="s.id" class="border-t border-gray-100 dark:border-gray-800">
-            <td class="px-4 py-3 font-mono">{{ s.id }}</td>
-            <td class="px-4 py-3">{{ s.name || '—' }}</td>
+<td class="px-4 py-3 font-mono">
+  <RouterLink :to="{ name: 'devices', query: { id: s.id } }" class="hover:underline">
+    {{ s.id }}
+  </RouterLink>
+</td>
+<td class="px-4 py-3">
+  <RouterLink :to="{ name: 'devices', query: { id: s.id } }" class="hover:underline">
+    {{ s.name || '—' }}
+  </RouterLink>
+</td>
 
             <td class="px-4 py-3">{{ isNumber(s.pm25) ? `${s.pm25} µg/m³` : '—' }}</td>
             <td class="px-4 py-3">{{ isNumber(s.pm10) ? `${s.pm10} µg/m³` : '—' }}</td>
@@ -65,7 +73,8 @@
               </span>
             </td>
             <td class="px-4 py-3">
-              <RouterLink :to="`/devices/${encodeURIComponent(s.id)}`" class="text-emerald-600 hover:underline">View
+              <RouterLink :to="{ name: 'devices', query: { id: s.id } }" class="text-emerald-600 hover:underline">
+                View
               </RouterLink>
             </td>
           </tr>
@@ -79,12 +88,14 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import { api } from '@/services/api'
+import { MAP_DEVICES } from '@/constants/mapSites.js'
 
 const search = ref('')
 const loading = ref(false)
 const error = ref('')
 const rows = ref([])
 const STALE_MINUTES = 60 // mark offline if older than this
+const BASE_TO_NAME = Object.fromEntries(MAP_DEVICES.map(d => [d.id, d.name]))
 
 onMounted(load)
 
@@ -143,10 +154,10 @@ async function load() {
       }
 
       merged.push({
-        id: baseId, name: baseId,
+        id: baseId, name: BASE_TO_NAME[baseId] ?? baseId,
         pm25, pm10, voc: vocVal, o3, no2, so2, tempC, rh, noise, illum,
         status,
-        lastSeen: lastSeenMs,        
+        lastSeen: lastSeenMs,
         lastSeenUtc
       })
     }
@@ -196,7 +207,7 @@ function pickNum(obj, keys) {
 function toMs(v) {
   if (!v) return 0
   if (typeof v === 'number' && Number.isFinite(v)) return v
-  const ms = Date.parse(v) 
+  const ms = Date.parse(v)
   return Number.isFinite(ms) ? ms : 0
 }
 </script>
