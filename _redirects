@@ -1,0 +1,6 @@
+# 1) Proxy API calls (HTTPS on Netlify → HTTP on your backend)
+#    /api/v6/... -> http://47.190.103.180:5001/api/v6/...
+/api/*  http://47.190.103.180:5001/api/:splat  200
+
+# 2) SPA fallback: send all other routes to index.html
+/*      /index.html                               200
