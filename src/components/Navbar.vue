@@ -78,7 +78,7 @@ onBeforeUnmount(detachObservers)
           <RouterLink :class="scrolled ? 'text-gray-700 hover:text-blue-600' : 'text-white/85 hover:text-white'" to="/">Home</RouterLink>
           <RouterLink :class="scrolled ? 'text-gray-700 hover:text-blue-600' : 'text-white/85 hover:text-white'" to="/dashboard">Dashboard</RouterLink>
           <RouterLink :class="scrolled ? 'text-gray-700 hover:text-blue-600' : 'text-white/85 hover:text-white'" to="/devices">Devices</RouterLink>
-          <RouterLink :class="scrolled ? 'text-gray-700 hover:text-blue-600' : 'text-white/85 hover:text-white'" to="/Team">Team</RouterLink>
+          <RouterLink :class="scrolled ? 'text-gray-700 hover:text-blue-600' : 'text-white/85 hover:text-white'" to="/Team">About</RouterLink>
           <!-- <span :class="scrolled ? 'text-gray-400' : 'text-white/60'">Alerts</span> -->
         </div>
 
@@ -125,7 +125,7 @@ onBeforeUnmount(detachObservers)
       <RouterLink to="/devices" class="block px-6 py-3 text-gray-800 dark:text-gray-100 hover:bg-gray-100/60 dark:hover:bg-gray-800/60">Devices</RouterLink>
       <RouterLink to="/team" class="block px-6 py-3 text-gray-800 dark:text-gray-100 hover:bg-gray-100/60 dark:hover:bg-gray-800/60">Team</RouterLink>
 
-      <span class="block px-6 py-3 text-gray-400 cursor-not-allowed">Alerts</span>
+      <!-- <span class="block px-6 py-3 text-gray-400 cursor-not-allowed">Alerts</span> -->
       <button class="w-full text-left px-6 py-3 bg-blue-600 text-white hover:bg-blue-700">Login</button>
     </div>
   </nav>

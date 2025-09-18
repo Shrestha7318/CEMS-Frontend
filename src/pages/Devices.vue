@@ -10,7 +10,7 @@
 import SensorTable from '@/components/SensorTable.vue'
 import { ref, onMounted } from "vue";
 import DevicesMap from "@/components/DevicesMap.vue";
-import { api } from "@/services/api"; // your mock/real API
+import { api } from "@/services/api"; 
 
 const devices = ref([]);
 

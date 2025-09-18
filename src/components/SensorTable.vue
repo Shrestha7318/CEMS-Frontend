@@ -18,45 +18,69 @@
           <tr class="text-left">
             <th class="px-4 py-3">ID</th>
             <th class="px-4 py-3">Name</th>
-            <th class="px-4 py-3">PM2.5</th>
-            <th class="px-4 py-3">PM10</th>
-            <th class="px-4 py-3">VOC</th>
-            <th class="px-4 py-3">O₃</th>
-            <th class="px-4 py-3">NO₂</th>
-            <th class="px-4 py-3">SO₂</th>
-            <th class="px-4 py-3">Temp</th>
-            <th class="px-4 py-3">RH</th>
-            <th class="px-4 py-3 hidden md:table-cell">Noise</th>
+
+            <th class="px-4 py-3 text-right">
+              PM2.5 <span class="opacity-60 font-normal">(µg/m³)</span>
+            </th>
+            <th class="px-4 py-3 text-right">
+              PM10 <span class="opacity-60 font-normal">(µg/m³)</span>
+            </th>
+
+            <th class="px-4 py-3 text-right">
+              VOC <span class="opacity-60 font-normal">(ppm)</span>
+            </th>
+            <th class="px-4 py-3 text-right">
+              O₃ <span class="opacity-60 font-normal">(ppm)</span>
+            </th>
+            <th class="px-4 py-3 text-right">
+              NO₂ <span class="opacity-60 font-normal">(ppm)</span>
+            </th>
+            <th class="px-4 py-3 text-right">
+              SO₂ <span class="opacity-60 font-normal">(ppm)</span>
+            </th>
+
+            <th class="px-4 py-3 text-right">
+              Temp <span class="opacity-60 font-normal">(°F)</span>
+            </th>
+            <th class="px-4 py-3 text-right">
+              RH <span class="opacity-60 font-normal">(%)</span>
+            </th>
+
+            <th class="px-4 py-3 text-right hidden md:table-cell">
+              Noise <span class="opacity-60 font-normal">(dB)</span>
+            </th>
+
             <th class="px-4 py-3">Status</th>
             <th class="px-4 py-3">Last Seen</th>
             <th class="px-4 py-3"></th>
           </tr>
         </thead>
-        <tbody>
+        <tbody class="[&>tr>td]:tabular-nums">
           <tr v-for="s in filtered" :key="s.id" class="border-t border-gray-100 dark:border-gray-800">
-<td class="px-4 py-3 font-mono">
-  <RouterLink :to="{ name: 'devices', query: { id: s.id } }" class="hover:underline">
-    {{ s.id }}
-  </RouterLink>
-</td>
-<td class="px-4 py-3">
-  <RouterLink :to="{ name: 'devices', query: { id: s.id } }" class="hover:underline">
-    {{ s.name || '—' }}
-  </RouterLink>
-</td>
+            <td class="px-4 py-3 font-mono">
+              <RouterLink :to="{ name: 'devices', query: { id: s.id } }" class="hover:underline">
+                {{ s.id }}
+              </RouterLink>
+            </td>
+            <td class="px-4 py-3">
+              <RouterLink :to="{ name: 'devices', query: { id: s.id } }" class="hover:underline">
+                {{ s.name || '—' }}
+              </RouterLink>
+            </td>
 
-            <td class="px-4 py-3">{{ isNumber(s.pm25) ? `${s.pm25} µg/m³` : '—' }}</td>
-            <td class="px-4 py-3">{{ isNumber(s.pm10) ? `${s.pm10} µg/m³` : '—' }}</td>
+            <!-- Values only (no units in cells) -->
+            <td class="px-4 py-3 text-right">{{ isNumber(s.pm25) ? s.pm25 : '—' }}</td>
+            <td class="px-4 py-3 text-right">{{ isNumber(s.pm10) ? s.pm10 : '—' }}</td>
 
-            <td class="px-4 py-3">{{ isNumber(s.voc) ? s.voc : '—' }}</td>
-            <td class="px-4 py-3">{{ isNumber(s.o3) ? s.o3 : '—' }}</td>
-            <td class="px-4 py-3">{{ isNumber(s.no2) ? s.no2 : '—' }}</td>
-            <td class="px-4 py-3">{{ isNumber(s.so2) ? s.so2 : '—' }}</td>
+            <td class="px-4 py-3 text-right">{{ isNumber(s.voc) ? s.voc : '—' }}</td>
+            <td class="px-4 py-3 text-right">{{ isNumber(s.o3) ? s.o3 : '—' }}</td>
+            <td class="px-4 py-3 text-right">{{ isNumber(s.no2) ? s.no2 : '—' }}</td>
+            <td class="px-4 py-3 text-right">{{ isNumber(s.so2) ? s.so2 : '—' }}</td>
 
-            <td class="px-4 py-3">{{ isNumber(s.tempC) ? `${s.tempC.toFixed(1)} °C` : '—' }}</td>
-            <td class="px-4 py-3">{{ isNumber(s.rh) ? `${s.rh.toFixed(0)} %` : '—' }}</td>
+            <td class="px-4 py-3 text-right">{{ isNumber(s.tempC) ? s.tempC.toFixed(1) : '—' }}</td>
+            <td class="px-4 py-3 text-right">{{ isNumber(s.rh) ? s.rh.toFixed(0) : '—' }}</td>
 
-            <td class="px-4 py-3 hidden md:table-cell">{{ isNumber(s.noise) ? `${s.noise} dB` : '—' }}</td>
+            <td class="px-4 py-3 text-right hidden md:table-cell">{{ isNumber(s.noise) ? s.noise : '—' }}</td>
 
             <td class="px-4 py-3">
               <span class="px-2 py-1 rounded-lg" :class="{
@@ -83,6 +107,7 @@
     </div>
   </div>
 </template>
+
 
 
 <script setup>

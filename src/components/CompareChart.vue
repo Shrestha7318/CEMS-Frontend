@@ -1,5 +1,5 @@
 <template>
-  <div class="p-4 rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-soft">
+  <div class="p-4 rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-soft relative">
     <!-- Header -->
     <div class="flex items-center justify-between gap-3 mb-3 flex-wrap">
       <h3 class="font-semibold">Comparison — {{ labelFor(metric) }}</h3>
@@ -8,8 +8,28 @@
       </div>
     </div>
 
+    <!-- Loading skeleton -->
+    <div v-if="busy" class="h-[420px] animate-pulse space-y-4">
+      <div class="h-6 w-40 bg-gray-200/80 dark:bg-gray-800/70 rounded"></div>
+      <div class="h-40 bg-gray-200/80 dark:bg-gray-800/70 rounded"></div>
+      <div class="grid grid-cols-3 gap-3">
+        <div class="h-16 bg-gray-200/80 dark:bg-gray-800/70 rounded"></div>
+        <div class="h-16 bg-gray-200/80 dark:bg-gray-800/70 rounded"></div>
+        <div class="h-16 bg-gray-200/80 dark:bg-gray-800/70 rounded"></div>
+      </div>
+      <!-- optional centered spinner -->
+      <div class="absolute inset-0 grid place-items-center pointer-events-none">
+        <svg class="h-7 w-7 animate-spin opacity-70" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/>
+        </svg>
+      </div>
+    </div>
+
     <!-- Empty state -->
-    <div v-if="!hasAnyData" class="h-[420px] grid place-items-center text-sm text-gray-500 dark:text-gray-400">
+    <div
+      v-else-if="!hasAnyData"
+      class="h-[420px] grid place-items-center text-sm text-gray-500 dark:text-gray-400">
       No data to display for {{ labelFor(metric) }} in the selected range.
     </div>
 
@@ -36,9 +56,10 @@ import VChart from 'vue-echarts'
 use([CanvasRenderer, LineChart, TooltipComponent, LegendComponent, GridComponent, DataZoomComponent])
 
 const props = defineProps({
-  seriesByDevice: { type: Object, default: () => ({}) }, // { deviceId: [{ts, value}|{ts, metric}], ... }
+  seriesByDevice: { type: Object, default: () => ({}) }, // { deviceLabel: [{ts, value}], ... }
   metric: { type: String, default: 'pm25' },
   days: { type: Number, default: 3 },
+  busy: { type: Boolean, default: false },               // <-- NEW
 })
 
 const LABELS = {
@@ -47,14 +68,14 @@ const LABELS = {
   temperature: 'Temp (°F)',
   humidity: 'Humidity (%)',
   noise: 'Noise (dB)',
-  voc: 'VOC',
-  o3: 'O₃',
-  so2: 'SO₂',
-  no2: 'NO₂',
+  voc: 'VOC (ppm)',
+  o3: 'O₃ (ppm)',
+  so2: 'SO₂ (ppm)',
+  no2: 'NO₂ (ppm)',
 }
 const UNITS = {
   pm25: 'µg/m³', pm10: 'µg/m³', temperature: '°F', humidity: '%',
-  noise: 'dB', voc: '', o3: '', so2: '', no2: ''
+  noise: 'dB', voc: 'ppm', o3: 'ppm', so2: 'ppm', no2: 'ppm'
 }
 const labelFor = k => LABELS[k] || k
 
@@ -66,9 +87,9 @@ function toMs(ts) {
 
 const builtSeries = computed(() => {
   // Build ECharts series array, dropping invalid points
-  return Object.entries(props.seriesByDevice || {}).map(([deviceId, rows]) => {
+  return Object.entries(props.seriesByDevice || {}).map(([deviceLabel, rows]) => {
     const data = (rows || [])
-      .map((d) => {
+      .map(d => {
         const x = toMs(d.ts)
         const y = d.value ?? d?.[props.metric] ?? null
         const yNum = typeof y === 'string' ? parseFloat(y) : y
@@ -76,14 +97,14 @@ const builtSeries = computed(() => {
       })
       .filter(Boolean)
       .sort((a, b) => a[0] - b[0])
-    return { name: deviceId, type: 'line', showSymbol: false, smooth: false, sampling: 'lttb', data }
+    return { name: deviceLabel, type: 'line', showSymbol: false, smooth: false, sampling: 'lttb', data }
   })
 })
 
 // Any data at all?
 const hasAnyData = computed(() => builtSeries.value.some(s => (s.data?.length || 0) > 0))
 
-// Force redraw if metric changes or devices change
+// Force redraw if metric or devices change
 const chartKey = computed(() => {
   const ids = Object.keys(props.seriesByDevice || {}).sort().join('|')
   return `${props.metric}_${ids}_${hasAnyData.value ? '1' : '0'}`
@@ -102,10 +123,9 @@ const option = computed(() => ({
     splitNumber: 6,
     axisLabel: {
       hideOverlap: true,
-      formatter: v =>
-        new Intl.DateTimeFormat(undefined, {
-          month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
-        }).format(new Date(v)),
+      formatter: v => new Intl.DateTimeFormat(undefined, {
+        month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+      }).format(new Date(v)),
     },
   },
   yAxis: { type: 'value', scale: true, name: UNITS[props.metric] || '', nameGap: 10 },
