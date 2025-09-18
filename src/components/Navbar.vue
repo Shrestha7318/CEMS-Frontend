@@ -70,15 +70,16 @@ onBeforeUnmount(detachObservers)
           class="text-2xl font-bold transition"
           :class="scrolled ? 'text-blue-600' : 'text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.6)]'"
         >
-          CEMS
+          Smart Coast
         </RouterLink>
 
         <!-- Desktop Menu -->
         <div class="hidden md:flex space-x-8">
+          <RouterLink :class="scrolled ? 'text-gray-700 hover:text-blue-600' : 'text-white/85 hover:text-white'" to="/">Home</RouterLink>
           <RouterLink :class="scrolled ? 'text-gray-700 hover:text-blue-600' : 'text-white/85 hover:text-white'" to="/dashboard">Dashboard</RouterLink>
           <RouterLink :class="scrolled ? 'text-gray-700 hover:text-blue-600' : 'text-white/85 hover:text-white'" to="/devices">Devices</RouterLink>
-          <span :class="scrolled ? 'text-gray-400' : 'text-white/60'">Reports</span>
-          <span :class="scrolled ? 'text-gray-400' : 'text-white/60'">Alerts</span>
+          <RouterLink :class="scrolled ? 'text-gray-700 hover:text-blue-600' : 'text-white/85 hover:text-white'" to="/Team">Team</RouterLink>
+          <!-- <span :class="scrolled ? 'text-gray-400' : 'text-white/60'">Alerts</span> -->
         </div>
 
         <!-- Theme toggle -->
@@ -99,7 +100,7 @@ onBeforeUnmount(detachObservers)
         <!-- Desktop CTA -->
         <div class="hidden md:flex">
           <button
-            class="px-4 py-2 rounded-xl transition"
+            class="px-4 py-2 rounded-xl transition cursor-not-allowed"
             :class="scrolled ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-white/20 text-white hover:bg-white/30 backdrop-blur'"
           >
             Login
@@ -122,7 +123,8 @@ onBeforeUnmount(detachObservers)
     <div v-if="isOpen" class="md:hidden bg-white/90 dark:bg-gray-900/90 backdrop-blur shadow-md">
       <RouterLink to="/dashboard" class="block px-6 py-3 text-gray-800 dark:text-gray-100 hover:bg-gray-100/60 dark:hover:bg-gray-800/60">Dashboard</RouterLink>
       <RouterLink to="/devices" class="block px-6 py-3 text-gray-800 dark:text-gray-100 hover:bg-gray-100/60 dark:hover:bg-gray-800/60">Devices</RouterLink>
-      <span class="block px-6 py-3 text-gray-400 cursor-not-allowed">Reports</span>
+      <RouterLink to="/team" class="block px-6 py-3 text-gray-800 dark:text-gray-100 hover:bg-gray-100/60 dark:hover:bg-gray-800/60">Team</RouterLink>
+
       <span class="block px-6 py-3 text-gray-400 cursor-not-allowed">Alerts</span>
       <button class="w-full text-left px-6 py-3 bg-blue-600 text-white hover:bg-blue-700">Login</button>
     </div>

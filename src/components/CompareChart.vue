@@ -44,7 +44,7 @@ const props = defineProps({
 const LABELS = {
   pm25: 'PM2.5 (µg/m³)',
   pm10: 'PM10 (µg/m³)',
-  temperature: 'Temp (°C)',
+  temperature: 'Temp (°F)',
   humidity: 'Humidity (%)',
   noise: 'Noise (dB)',
   voc: 'VOC',
@@ -53,7 +53,7 @@ const LABELS = {
   no2: 'NO₂',
 }
 const UNITS = {
-  pm25: 'µg/m³', pm10: 'µg/m³', temperature: '°C', humidity: '%',
+  pm25: 'µg/m³', pm10: 'µg/m³', temperature: '°F', humidity: '%',
   noise: 'dB', voc: '', o3: '', so2: '', no2: ''
 }
 const labelFor = k => LABELS[k] || k

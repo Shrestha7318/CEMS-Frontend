@@ -48,9 +48,9 @@
       <div class="flex items-center justify-between gap-2 p-2 border-t border-gray-100 dark:border-gray-800">
         <button class="text-xs px-3 py-1.5 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800"
           @click="clear">Clear</button>
-        <button
+        <!-- <button
           class="text-xs px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
-          @click="open = false">Done</button>
+          @click="open = false">Done</button> -->
       </div>
     </div>
   </div>

@@ -12,11 +12,14 @@ const DeviceUnified = () =>
     import ("@/pages/DeviceUnified.vue");
 const NotFound = () =>
     import ("@/pages/NotFound.vue");
+const Team = () =>
+    import ("@/pages/Team.vue");
 
 const routes = [
     { path: '/', name: 'Home', component: HomePage },
     { path: "/dashboard", name: "Dashboard", component: Dashboard },
     { path: '/devices', name: 'devices', component: DeviceUnified },
+    { path: '/Team', name: 'Team', component: Team },
     // { path: "/devices", name: "Devices", component: Devices },
     // {
     //     path: "/devices/:id",

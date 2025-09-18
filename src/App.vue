@@ -41,14 +41,14 @@ onMounted(() => {
   <!-- Footer -->
   <footer class="mt-20 bg-transparent text-gray-600 dark:text-gray-300">
     <div class="max-w-7xl mx-auto px-6 py-10 flex flex-col md:flex-row justify-between items-center">
-      <div class="text-lg font-semibold">🌍 CEMS Project</div>
+      <div class="text-lg font-semibold">🌍 Smart Coast Project</div>
       <div class="flex space-x-6 mt-4 md:mt-0">
         <a href="#" class="hover:text-blue-600 transition">About</a>
         <a href="#" class="hover:text-blue-600 transition">Contact</a>
       </div>
     </div>
     <div class="text-center py-4 text-sm border-t border-gray-300 dark:border-gray-700 pb-20">
-      © 2025 CEMS.
+      © 2025 Smart Coast .
     </div>
   </footer>
 </template>

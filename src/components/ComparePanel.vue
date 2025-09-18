@@ -30,7 +30,7 @@
         </div>
 
         <button
-          class="hidden md:inline-flex px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-sm"
+          class="hidden md:inline-flex px-3 text-white py-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-blue-500 hover:bg-blue-600 dark:hover:bg-gray-800 text-sm"
           @click="reload" title="Refresh">
           Refresh
         </button>

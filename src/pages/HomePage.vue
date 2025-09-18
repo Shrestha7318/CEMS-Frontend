@@ -10,10 +10,10 @@
 
     <div class="relative z-10 max-w-4xl px-6 md:px-10 text-left text-white pt-20">
       <p class="text-xs md:text-sm uppercase tracking-[0.22em] text-emerald-300">
-        Coastal Environmental Monitoring
+        Smart Coastal Environmental Monitoring System
       </p>
       <h1 class="mt-3 text-4xl md:text-6xl font-bold tracking-tight leading-[1.05]">
-        CEMS — real-time air & seawater monitoring for coastal communities
+        Real-time air for coastal communities
       </h1>
       <p class="mt-5 text-white/85 max-w-2xl">
         Low-cost sensing units stream data to a secure server so you can visualize trends,
