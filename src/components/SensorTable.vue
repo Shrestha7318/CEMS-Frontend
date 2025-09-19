@@ -3,8 +3,28 @@
     class="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-soft overflow-hidden">
     <!-- Top bar -->
     <div class="p-4 flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
-      <input v-model="search" type="text" placeholder="Search by ID or location..."
-        class="w-full sm:w-72 px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-transparent outline-none" />
+      <div class="flex items-center gap-3 w-full sm:w-auto">
+        <input
+          v-model="search"
+          type="text"
+          placeholder="Search by ID or location..."
+          class="w-full sm:w-72 px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-transparent outline-none" />
+
+        <!-- Refresh button (background refresh) -->
+        <button
+          class="inline-flex items-center gap-2 px-3 py-2 rounded-xl border text-white
+                 bg-blue-600 dark:border-gray-700
+                 hover:bg-blue-500 dark:hover:bg-gray-800 disabled:opacity-60 disabled:cursor-not-allowed"
+          :disabled="refreshing"
+          @click="refresh">
+          <svg v-if="refreshing" class="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/>
+          </svg>
+          <span>{{ refreshing ? 'Refreshing…' : 'Refresh' }}</span>
+        </button>
+      </div>
+
       <div class="text-sm text-gray-500 dark:text-gray-400">Total: {{ filtered.length }}</div>
     </div>
 
@@ -108,8 +128,6 @@
   </div>
 </template>
 
-
-
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import { api } from '@/services/api'
@@ -117,21 +135,45 @@ import { MAP_DEVICES } from '@/constants/mapSites.js'
 
 const search = ref('')
 const loading = ref(false)
+const refreshing = ref(false) 
 const error = ref('')
 const rows = ref([])
-const STALE_MINUTES = 60 // mark offline if older than this
+const STALE_MINUTES = 120 // mark offline if older than this
 const BASE_TO_NAME = Object.fromEntries(MAP_DEVICES.map(d => [d.id, d.name]))
 
-onMounted(load)
+onMounted(() => load({ background: false }))
 
-async function load() {
-  loading.value = true
-  error.value = ''
+/** Background-safe refresh button handler */
+async function refresh() {
+  if (refreshing.value) return
+  refreshing.value = true
   try {
-    const siteNames = await api.getSites()
-    const latestBySite = await api.getLatestReadings({ hours: 24 })
+    await load({ background: true, forceNetwork: true })
+  } finally {
+    refreshing.value = false
+  }
+}
 
-    // group by base id and merge TH + VOC
+/** Load/merge logic (shared by initial load + refresh) */
+async function load({ background = false, forceNetwork = false } = {}) {
+  if (!background) {
+    loading.value = true
+    error.value = ''
+  }
+  try {
+    // 1) Sites list (api.getSites() already does cache-first)
+    const siteNames = await api.getSites()
+
+    // 2) Latest readings
+    // - initial load: reuse your fast cache path (freshMs=10min, refresh:true)
+    // - manual refresh: force network (freshMs=0) and still let API write-through the cache
+    const latestBySite = await api.getLatestReadings({
+      hours: 24,
+      freshMs: forceNetwork ? 0 : 10 * 60 * 1000,
+      refresh: true
+    })
+
+    // 3) Merge rows
     const byBase = new Map()
     for (const siteName of siteNames) {
       const baseId = baseFromSite(siteName)
@@ -141,6 +183,7 @@ async function load() {
       if (siteName.includes('-TH-')) bucket.th = latest
       if (siteName.includes('-VOC-')) bucket.voc = latest
     }
+
     function pickUtcStr(row) {
       if (!row) return null
       const repMs = toMs(row.reportedUTC)
@@ -148,9 +191,9 @@ async function load() {
       if (!Number.isFinite(repMs) && !Number.isFinite(recMs)) return null
       return (repMs >= recMs ? row.reportedUTC : row.receivedUTC) || null
     }
+
     const merged = []
     for (const [baseId, { th, voc }] of byBase) {
-      // Accept normalized keys (from your api.js) OR raw API keys
       const pm25 = pickNum(th, ['pm25', 'PM2_5'])
       const pm10 = pickNum(th, ['pm10', 'PM10'])
       const tempC = pickNum(th, ['tempC', 'Temperature'])
@@ -168,8 +211,6 @@ async function load() {
 
       const lastSeenMs = Math.max(thMs || 0, vocMs || 0) || null
       const lastSeenUtc = (thMs >= vocMs ? pickUtcStr(th) : pickUtcStr(voc)) || null
-
-
 
       let status = 'online'
       if (!lastSeenMs) {
@@ -189,14 +230,15 @@ async function load() {
     rows.value = merged.sort((a, b) => a.id.localeCompare(b.id))
   } catch (e) {
     console.error('SensorTable load failed:', e?.response?.data ?? e)
-    error.value = `Failed to load devices: ${e?.response?.status ?? e?.message ?? 'unknown'}`
+    if (!background) {
+      error.value = `Failed to load devices: ${e?.response?.status ?? e?.message ?? 'unknown'}`
+    }
   } finally {
-    loading.value = false
+    if (!background) loading.value = false
   }
 }
 
 function baseFromSite(site) {
-  // "UTIS0001-TH-V6_1" -> "UTIS0001"
   return String(site).split('-')[0]
 }
 
@@ -221,14 +263,13 @@ function pickNum(obj, keys) {
   for (const k of keys) {
     const raw =
       obj[k] ??
-      obj[k.toLowerCase?.()] ??
-      obj[k.toUpperCase?.()]
+      obj[k?.toLowerCase?.()] ??
+      obj[k?.toUpperCase?.()]
     const n = typeof raw === 'string' ? parseFloat(raw) : raw
     if (typeof n === 'number' && Number.isFinite(n)) return n
   }
   return null
 }
-
 function toMs(v) {
   if (!v) return 0
   if (typeof v === 'number' && Number.isFinite(v)) return v

@@ -5,9 +5,9 @@
             <h1 class="text-2xl font-semibold">Devices</h1>
             <div class="flex gap-2 overflow-x-auto py-1">
                 <button v-for="p in pins" :key="p.id" class="px-3 py-1.5 rounded-xl border text-sm whitespace-nowrap transition
-         border-gray-300 dark:border-gray-700" :class="p.id === selectedId
-            ? 'bg-emerald-600 text-white border-emerald-600 hover:bg-emerald-700'
-            : 'bg-transparent text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700'"
+                 border-gray-300 dark:border-gray-700" :class="p.id === selectedId
+                    ? 'bg-emerald-600 text-white border-emerald-600 hover:bg-emerald-700'
+                    : 'bg-transparent text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700'"
                     @click="selectDevice(p.id)">
                     {{ p.name }}
                 </button>
@@ -94,16 +94,49 @@
 <script setup>
 import { ref, watch, onMounted } from 'vue'
 import { api } from '@/services/api'
-import { MAP_DEVICES as pins } from '@/constants/mapSites'
-import { thSiteOf, vocSiteOf } from '@/constants/mapSites'
+import { MAP_DEVICES as pins, thSiteOf, vocSiteOf } from '@/constants/mapSites'
 import DeviceMetricCard from '@/components/DeviceMetricCard.vue'
 import DevicesSelectMap from '../components/DevicesSelectMap.vue'
 import { useRoute, useRouter } from 'vue-router'
 
+import { idbGet, idbSet } from '@/utils/idb'   // tolerant readers below
+import { preloadDevicesPage } from '@/preload/devicesWarmup' // your warmup util
+
+
+/* --------------------------- Router state --------------------------- */
 const route = useRoute()
 const router = useRouter()
-
 const selectedId = ref(String(route.query.id || pins[0]?.id || ''))
+
+// --- background “trickle” warmer (no UI) ---
+function warmOtherDevices(exceptId) {
+    // Respect user’s data-saver / slow network automatically (the util already does)
+    const remaining = pins.filter(d => d.id !== exceptId)
+    if (!remaining.length) return
+
+    // Avoid re-warming the same ids repeatedly during this session
+    window.__warmedIds ??= new Set()
+
+    const toWarm = remaining.filter(d => !window.__warmedIds.has(d.id))
+    if (!toWarm.length) return
+
+    // Trickle with small concurrency; run when the main thread is idle-ish
+    const schedule = (fn) =>
+    (window.requestIdleCallback
+        ? requestIdleCallback(() => fn(), { timeout: 2000 })
+        : setTimeout(fn, 0))
+
+    schedule(async () => {
+        // Warm everything except the selected, with gentle concurrency.
+        await preloadDevicesPage({
+            devices: toWarm,           // only the leftovers
+            count: toWarm.length,      // warm them all
+            concurrency: 2             // stay gentle; 2–3 is a good balance
+        }).catch(() => { })
+
+        toWarm.forEach(d => window.__warmedIds.add(d.id))
+    })
+}
 
 watch(() => route.query.id, (id) => {
     if (id && id !== selectedId.value) selectedId.value = String(id)
@@ -113,14 +146,24 @@ watch(selectedId, (id) => {
     router.replace({ name: 'devices', query: { ...route.query, id } })
 })
 
+/* --------------------------- Local state ---------------------------- */
 const device = ref(null)
 const latest = ref({ th: null, voc: null })
-const loadingSeries = ref(true) // start in loading state
+const loadingSeries = ref(true)
 const expandedKeys = ref([])
 const rows = ref([])
 
-const STALE_MINUTES = 720
+const STALE_MINUTES = 720           // for online/offline badge
+const LATEST_TTL_MS = 30 * 60 * 1000 // use cached latest up to 30 min
+const ROWS_TTL_MS = 30 * 60 * 1000 // use cached rows up to 30 min
 
+/* --------------------------- Cache keys ----------------------------- */
+const ROWS_VERSION = 'v1'
+const HOURS = 24
+const rowsKey = (id) => `rows:${id}:${HOURS}h:${ROWS_VERSION}`
+const latestKey = (id) => `latest:${id}`
+
+/* ---------------------- UI / helpers ---------------------- */
 function toggleExpand(key) {
     const i = expandedKeys.value.indexOf(key)
     if (i >= 0) expandedKeys.value.splice(i, 1)
@@ -132,75 +175,169 @@ function selectDevice(id) {
     selectedId.value = id
 }
 
-async function loadDeviceAndSeries() {
+function toMs(v) {
+    if (!v) return 0
+    if (typeof v === 'number' && Number.isFinite(v)) return v
+    const ms = Date.parse(v)
+    return Number.isFinite(ms) ? ms : 0
+}
+
+/* ------------- tolerant cache readers (mixed shapes safe) ----------- */
+async function readCachedLatest(id) {
+    // can be { latest, cachedAt } OR { data, savedAt }
+    const raw = await idbGet(latestKey(id))
+    if (!raw) return null
+    if (raw.latest) return { latest: raw.latest, cachedAt: raw.cachedAt ?? 0 }
+    if (raw.data) return { latest: raw.data, cachedAt: raw.savedAt ?? 0 }
+    return null
+}
+
+async function readCachedRows(id) {
+    const raw = await idbGet(rowsKey(id))
+    if (!raw) return null
+    if (raw.rows) return { rows: raw.rows, cachedAt: raw.cachedAt ?? 0 }
+    if (raw.data) return { rows: raw.data, cachedAt: raw.savedAt ?? 0 }
+    return null
+}
+
+/* -------------------- Build header/device object -------------------- */
+function buildDeviceFromLatest(id, th, voc) {
+    const pin = pins.find(p => p.id === id)
+    const thMs = toMs(th?.lastSeenMs ?? th?.reportedUTC ?? th?.receivedUTC)
+    const vocMs = toMs(voc?.lastSeenMs ?? voc?.reportedUTC ?? voc?.receivedUTC)
+    const lastSeenMs = Math.max(thMs || 0, vocMs || 0) || null
+    let status = 'online'
+    if (!lastSeenMs) status = 'offline'
+    else if ((Date.now() - lastSeenMs) / 60000 > STALE_MINUTES) status = 'offline'
+    return { ...pin, status, lastSeen: lastSeenMs }
+}
+
+/* ------------------------ Build rows from API ----------------------- */
+function buildRowsFromSeries(id, thSeries, vocSeries) {
+    const pick = (seriesObj, isTH, key) => {
+        const arr = isTH ? (seriesObj?.[thSiteOf(id)] || []) : (seriesObj?.[vocSiteOf(id)] || [])
+        return (arr || []).map(d => ({ ts: d.ts, value: d.value ?? d[key] }))
+    }
+    const makeRow = (isTH, key, label, unit, s) => ({ key, label, unit, points: s ? pick(s, isTH, key) : [] })
+    const labels = {
+        pm25: 'PM2.5', pm10: 'PM10', temperature: 'Temp', humidity: 'Humidity',
+        noise: 'Noise', illumination: 'Illumination', voc: 'VOC', o3: 'O₃', so2: 'SO₂', no2: 'NO₂'
+    }
+    const units = {
+        pm25: 'µg/m³', pm10: 'µg/m³', temperature: '°C', humidity: '%',
+        noise: 'dB', illumination: 'lx', voc: 'ppm', o3: 'ppm', so2: 'ppm', no2: 'ppm'
+    }
+    const out = []
+    out.push(makeRow(true, 'pm25', labels.pm25, units.pm25, thSeries[0]))
+    out.push(makeRow(true, 'pm10', labels.pm10, units.pm10, thSeries[1]))
+    out.push(makeRow(true, 'temperature', labels.temperature, units.temperature, thSeries[2]))
+    out.push(makeRow(true, 'humidity', labels.humidity, units.humidity, thSeries[3]))
+    out.push(makeRow(true, 'noise', labels.noise, units.noise, thSeries[4]))
+    out.push(makeRow(true, 'illumination', labels.illumination, units.illumination, thSeries[5]))
+    out.push(makeRow(false, 'voc', labels.voc, units.voc, vocSeries[0]))
+    out.push(makeRow(false, 'o3', labels.o3, units.o3, vocSeries[1]))
+    out.push(makeRow(false, 'so2', labels.so2, units.so2, vocSeries[2]))
+    out.push(makeRow(false, 'no2', labels.no2, units.no2, vocSeries[3]))
+    return out.filter(r => (r.points?.length || 0) > 0)
+}
+
+/* ---------------------- Main load sequence -------------------------- */
+async function loadFromCacheFirstThenRefresh() {
     const id = selectedId.value
     if (!id) return
-    loadingSeries.value = true
+
+    // 1) Try cache (instant paint)
+    const [cachedLatest, cachedRows] = await Promise.all([
+        readCachedLatest(id),
+        readCachedRows(id)
+    ])
+
+    const latestFreshEnough = cachedLatest && (Date.now() - cachedLatest.cachedAt) <= LATEST_TTL_MS
+    const rowsFreshEnough = cachedRows && (Date.now() - cachedRows.cachedAt) <= ROWS_TTL_MS
+
+    if (cachedLatest) {
+        latest.value = { th: cachedLatest.latest?.th ?? null, voc: cachedLatest.latest?.voc ?? null }
+        device.value = buildDeviceFromLatest(id, latest.value.th, latest.value.voc)
+    }
+    if (cachedRows) {
+        rows.value = cachedRows.rows || []
+    }
+
+    // If both are fresh enough, we can skip the spinner
+    loadingSeries.value = !(latestFreshEnough && rowsFreshEnough)
+
+    // 2) Always refresh in background and update UI + cache
     try {
-        // Header bits
-        const pin = pins.find(p => p.id === id)
-        const latestMap = await api.getLatestReadings({ hours: 24 })
-        const th = latestMap[thSiteOf(id)] || null
-        const v = latestMap[vocSiteOf(id)] || null
-        latest.value = { th, voc: v }
-
-        const lastSeenMs = Math.max(
-            Number.isFinite(th?.lastSeenMs) ? th.lastSeenMs : 0,
-            Number.isFinite(v?.lastSeenMs) ? v.lastSeenMs : 0
-        ) || null
-        let status = 'online'
-        if (!lastSeenMs) status = 'offline'
-        else if ((Date.now() - lastSeenMs) / 60000 > STALE_MINUTES) status = 'offline'
-        device.value = { ...pin, status, lastSeen: lastSeenMs }
-
-        // Build 24h series
-        const hours = 24
-        const thMetrics = ['pm25', 'pm10', 'temperature', 'humidity', 'noise', 'illumination']
-        const vocMetrics = ['voc', 'o3', 'so2', 'no2']
-
-        const thPromises = thMetrics.map(metric => api.getTimeseriesByMetric({ metric, siteIds: [thSiteOf(id)], hours }))
-        const vocPromises = vocMetrics.map(metric => api.getTimeseriesByMetric({ metric, siteIds: [vocSiteOf(id)], hours }))
-
-        const thSeries = await Promise.all(thPromises)
-        const vocSeries = await Promise.all(vocPromises)
-
-        function pick(seriesObj, key) {
-            const arr = seriesObj?.[thSiteOf(id)] || seriesObj?.[vocSiteOf(id)] || []
-            return (arr || []).map(d => ({ ts: d.ts, value: d.value ?? d[key] }))
-        }
-        const makeRow = (key, label, unit, s) => ({ key, label, unit, points: pick(s, key) })
-
-        const labels = {
-            pm25: 'PM2.5', pm10: 'PM10',
-            temperature: 'Temp', humidity: 'Humidity',
-            noise: 'Noise', illumination: 'Illumination',
-            voc: 'VOC', o3: 'O₃', so2: 'SO₂', no2: 'NO₂'
-        }
-        const units = {
-            pm25: 'µg/m³', pm10: 'µg/m³', temperature: '°C', humidity: '%',
-            noise: 'dB', illumination: 'lx', voc: 'ppm', o3: 'ppm', so2: 'ppm', no2: 'ppm'
-        }
-
-        const packed = [
-            makeRow('pm25', labels.pm25, units.pm25, thSeries[0]),
-            makeRow('pm10', labels.pm10, units.pm10, thSeries[1]),
-            makeRow('temperature', labels.temperature, units.temperature, thSeries[2]),
-            makeRow('pressure', 'Pressure', 'hPa', null),
-            makeRow('humidity', labels.humidity, units.humidity, thSeries[3]),
-            makeRow('noise', labels.noise, units.noise, thSeries[4]),
-            makeRow('illumination', labels.illumination, units.illumination, thSeries[5]),
-            makeRow('voc', labels.voc, units.voc, vocSeries[0]),
-            makeRow('o3', labels.o3, units.o3, vocSeries[1]),
-            makeRow('so2', labels.so2, units.so2, vocSeries[2]),
-            makeRow('no2', labels.no2, units.no2, vocSeries[3]),
-        ]
-
-        rows.value = packed.filter(r => (r.points?.length || 0) > 0)
+        const fresh = await fetchFresh(id)
+        applyFreshToUI(id, fresh)
+        await writeFreshToCache(id, fresh)
     } finally {
         loadingSeries.value = false
     }
 }
 
-onMounted(loadDeviceAndSeries)
-watch(selectedId, loadDeviceAndSeries)
+async function fetchFresh(id) {
+    // latest
+    const latestMap = await api.getLatestReadings({ hours: HOURS })
+    const th = latestMap[thSiteOf(id)] || null
+    const voc = latestMap[vocSiteOf(id)] || null
+
+    // series
+    const thMetrics = ['pm25', 'pm10', 'temperature', 'humidity', 'noise', 'illumination']
+    const vocMetrics = ['voc', 'o3', 'so2', 'no2']
+    const thPromises = thMetrics.map(metric => api.getTimeseriesByMetric({ metric, siteIds: [thSiteOf(id)], hours: HOURS }))
+    const vocPromises = vocMetrics.map(metric => api.getTimeseriesByMetric({ metric, siteIds: [vocSiteOf(id)], hours: HOURS }))
+    const [thSeries, vocSeries] = await Promise.all([Promise.all(thPromises), Promise.all(vocPromises)])
+
+    return { latest: { th, voc }, rows: buildRowsFromSeries(id, thSeries, vocSeries) }
+}
+
+function applyFreshToUI(id, fresh) {
+    latest.value = fresh.latest
+    device.value = buildDeviceFromLatest(id, fresh.latest.th, fresh.latest.voc)
+    rows.value = fresh.rows
+}
+
+async function writeFreshToCache(id, fresh) {
+    await idbSet(latestKey(id), { latest: fresh.latest, cachedAt: Date.now() })
+    await idbSet(rowsKey(id), { rows: fresh.rows, cachedAt: Date.now() })
+}
+
+/* --------------------------- Lifecycle ------------------------------ */
+onMounted(async () => {
+    // 0) Kick off background warmup (only once per session)
+    if (!window.__devicesWarmupStarted) {
+        window.__devicesWarmupStarted = true
+        // don’t block the page paint
+        setTimeout(() => preloadDevicesPage({ count: 4, concurrency: 2 }).catch(() => { }), 0)
+    }
+
+    await loadFromCacheFirstThenRefresh()
+    // in onMounted after await loadFromCacheFirstThenRefresh()
+    onMounted(async () => {
+        if (!window.__devicesWarmupStarted) {
+            window.__devicesWarmupStarted = true
+            // Keep your first “small” warmup for a snappy feel (optional)
+            setTimeout(() => preloadDevicesPage({ count: 4, concurrency: 2 }).catch(() => { }), 0)
+        }
+
+        await loadFromCacheFirstThenRefresh()
+
+        // Now warm the rest quietly in the background
+        warmOtherDevices(selectedId.value)
+    })
+
+    // also when user changes selection
+    watch(selectedId, async (id) => {
+        loadingSeries.value = true
+        await loadFromCacheFirstThenRefresh()
+        warmOtherDevices(id)
+    })
+
+})
+
+watch(selectedId, async () => {
+    loadingSeries.value = true
+    await loadFromCacheFirstThenRefresh()
+})
 </script>

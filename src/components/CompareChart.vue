@@ -17,7 +17,6 @@
         <div class="h-16 bg-gray-200/80 dark:bg-gray-800/70 rounded"></div>
         <div class="h-16 bg-gray-200/80 dark:bg-gray-800/70 rounded"></div>
       </div>
-      <!-- optional centered spinner -->
       <div class="absolute inset-0 grid place-items-center pointer-events-none">
         <svg class="h-7 w-7 animate-spin opacity-70" viewBox="0 0 24 24" fill="none" aria-hidden="true">
           <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
@@ -37,6 +36,7 @@
     <VChart
       v-else
       :key="chartKey"
+      ref="chartRef"
       :option="option"
       autoresize
       style="height: 420px"
@@ -45,22 +45,24 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, ref, nextTick } from 'vue'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
 import { LineChart } from 'echarts/charts'
 import { TooltipComponent, LegendComponent, GridComponent, DataZoomComponent } from 'echarts/components'
 import VChart from 'vue-echarts'
 
-// Register ECharts pieces once
 use([CanvasRenderer, LineChart, TooltipComponent, LegendComponent, GridComponent, DataZoomComponent])
 
 const props = defineProps({
   seriesByDevice: { type: Object, default: () => ({}) }, // { deviceLabel: [{ts, value}], ... }
   metric: { type: String, default: 'pm25' },
   days: { type: Number, default: 3 },
-  busy: { type: Boolean, default: false },               // <-- NEW
+  hours: { type: Number, default: 24 }, 
+  busy: { type: Boolean, default: false },
 })
+
+const chartRef = ref(null)
 
 const LABELS = {
   pm25: 'PM2.5 (µg/m³)',
@@ -86,7 +88,6 @@ function toMs(ts) {
 }
 
 const builtSeries = computed(() => {
-  // Build ECharts series array, dropping invalid points
   return Object.entries(props.seriesByDevice || {}).map(([deviceLabel, rows]) => {
     const data = (rows || [])
       .map(d => {
@@ -101,13 +102,25 @@ const builtSeries = computed(() => {
   })
 })
 
-// Any data at all?
 const hasAnyData = computed(() => builtSeries.value.some(s => (s.data?.length || 0) > 0))
 
-// Force redraw if metric or devices change
+// We exclude "hours" from the key on purpose to avoid remounting when user only moves the window.
 const chartKey = computed(() => {
   const ids = Object.keys(props.seriesByDevice || {}).sort().join('|')
   return `${props.metric}_${ids}_${hasAnyData.value ? '1' : '0'}`
+})
+
+// Compute the current x-extent of the (combined) series
+const xExtent = computed(() => {
+  let min = Infinity, max = -Infinity
+  for (const s of builtSeries.value) {
+    if (!s.data?.length) continue
+    const first = s.data[0][0]
+    const last = s.data[s.data.length - 1][0]
+    if (first < min) min = first
+    if (last > max) max = last
+  }
+  return Number.isFinite(min) && Number.isFinite(max) ? { min, max } : null
 })
 
 const option = computed(() => ({
@@ -115,8 +128,8 @@ const option = computed(() => ({
   legend: { top: 0 },
   grid: { left: 10, right: 10, top: 30, bottom: 60, containLabel: true },
   dataZoom: [
-    { type: 'inside', xAxisIndex: 0 },
-    { type: 'slider', xAxisIndex: 0, height: 20, bottom: 20 }
+    { id: 'dz-inside', type: 'inside', xAxisIndex: 0 },
+    { id: 'dz-slider', type: 'slider', xAxisIndex: 0, height: 20, bottom: 20 }
   ],
   xAxis: {
     type: 'time',
@@ -131,4 +144,37 @@ const option = computed(() => ({
   yAxis: { type: 'value', scale: true, name: UNITS[props.metric] || '', nameGap: 10 },
   series: builtSeries.value,
 }))
+
+/** Public API: slide the dataZoom to show the last `hours` of data (without remounting). */
+async function slideToHours(hours) {
+  const inst = chartRef.value?.chart
+  if (!inst || !xExtent.value) return
+  const end = xExtent.value.max
+  const start = end - hours * 3600 * 1000
+
+  // Make sure option is applied before we dispatch
+  await nextTick()
+
+  // Dispatch against both zooms (inside + slider) to keep them in sync
+  inst.dispatchAction({ type: 'dataZoom', dataZoomId: 'dz-inside', startValue: start, endValue: end })
+  inst.dispatchAction({ type: 'dataZoom', dataZoomId: 'dz-slider', startValue: start, endValue: end })
+}
+// in option.dataZoom, ensure ids exist:
+dataZoom: [
+  { id: 'dz-inside', type: 'inside', xAxisIndex: 0 },
+  { id: 'dz-slider', type: 'slider', xAxisIndex: 0, height: 20, bottom: 20 }
+]
+
+async function zoomFull() {
+  const inst = chartRef.value?.chart
+  if (!inst) return
+  await nextTick()
+  // Reset to full extent
+  inst.dispatchAction({ type: 'dataZoom', dataZoomId: 'dz-inside', start: 0, end: 100 })
+  inst.dispatchAction({ type: 'dataZoom', dataZoomId: 'dz-slider', start: 0, end: 100 })
+}
+
+defineExpose({ slideToHours, zoomFull })
+
+
 </script>

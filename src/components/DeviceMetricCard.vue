@@ -7,7 +7,7 @@
       </div>
     </div>
 
-    <!-- Loading -->
+    <!-- Loading (card) -->
     <div v-if="busy" class="h-[420px] grid place-items-center text-sm text-gray-500 dark:text-gray-400">
       Loading…
     </div>
@@ -48,17 +48,9 @@
               style="height: 200px"
               class="pointer-events-none"
             />
-            <!-- little minus button -->
-            <!-- <button
-              class="absolute top-1 right-1 inline-flex items-center justify-center h-6 w-6 rounded-md border text-xs
-                     bg-white/80 dark:bg-gray-900/80 border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
-              @click.stop="toggle(r.key)"
-              aria-label="Collapse row"
-              title="Collapse"
-            >–</button> -->
           </div>
 
-          <!-- ↗ expand-to-modal button (always visible) -->
+          <!-- ↗ expand-to-modal button -->
           <button
             class="absolute -top-2 -right-2 inline-flex items-center justify-center h-6 w-6 rounded-md border text-xs
                    bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
@@ -80,12 +72,12 @@
       </div>
     </div>
 
-    <!-- POPUP: full CompareChart with controls -->
+    <!-- POPUP: full CompareChart with controls + loading overlay -->
     <dialog ref="dlg" class="backdrop:bg-black/40 p-0 rounded-2xl overflow-hidden w-[min(980px,96vw)]">
-      <div class="bg-white dark:bg-gray-900">
+      <div class="bg-white dark:bg-gray-900 relative">
         <!-- header -->
         <div class="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-800">
-          <h4 class="font-semibold">Comparision Chart</h4>
+          <h4 class="font-semibold">Comparison Chart</h4>
           <button
             class="inline-flex items-center justify-center h-8 w-8 rounded-lg border text-sm
                    bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
@@ -96,11 +88,23 @@
         </div>
 
         <!-- body -->
-        <div class="p-4 space-y-3">
+        <div class="p-4 space-y-3 relative">
+          <!-- spinner overlay while loading -->
+          <div v-if="popupBusy"
+               class="absolute inset-0 grid place-items-center bg-white/60 dark:bg-gray-900/60 backdrop-blur-sm z-10">
+            <svg class="h-8 w-8 animate-spin opacity-80" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/>
+            </svg>
+          </div>
+
           <CompareChart
+            ref="popupChartRef"
             :seriesByDevice="popupSeriesByDevice"
             :metric="popupMetric"
             :days="popupDays"
+            :hours="popupHours"    
+            :busy="popupBusy"
           >
             <template #controls>
               <div class="flex items-center gap-2">
@@ -109,7 +113,7 @@
                   <option v-for="m in metricOptions" :key="m" :value="m">{{ LABELS[m] || m }}</option>
                 </select>
 
-                <!-- Range selector -->
+                <!-- Range selector (matches ComparePanel semantics) -->
                 <select v-model="popupRange" class="px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-transparent text-sm">
                   <option value="6h">6h</option>
                   <option value="12h">12h</option>
@@ -120,7 +124,7 @@
 
                 <button
                   class="hidden md:inline-flex px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-sm"
-                  @click="reloadPopup"
+                  @click="reloadPopup(true)"
                 >
                   Refresh
                 </button>
@@ -134,7 +138,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, nextTick } from 'vue'
 import VChart from 'vue-echarts'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
@@ -143,13 +147,14 @@ import { TooltipComponent, GridComponent, LegendComponent } from 'echarts/compon
 import CompareChart from '@/components/CompareChart.vue'
 import { api } from '@/services/api'
 import { thSiteOf, vocSiteOf } from '@/constants/mapSites'
+import { idbGet, idbSet } from '@/utils/idb'
 use([CanvasRenderer, BarChart, LineChart, TooltipComponent, GridComponent, LegendComponent])
 
 const props = defineProps<{
   rows: Array<{ key: string ; label: string; unit: string; points: Array<{ts: number|string; value: number|string}> }>,
   busy?: boolean,
   expandedKeys?: string[],
-  baseId: string // selected map device id (e.g., 'UTIS0001')
+  baseId: string
 }>()
 const emit = defineEmits(['toggle'])
 
@@ -226,13 +231,17 @@ function lineOption(row: any) {
 const dlg = ref<HTMLDialogElement | null>(null)
 const popupMetric = ref<string>('pm25')
 const popupRange  = ref<string>('24h') // default
+const popupHours  = computed(() => hoursFrom(popupRange.value))
+const popupDays   = computed(() => Math.max(1, Math.round(popupHours.value / 24)))
 const popupSeriesByDevice = ref<Record<string, any[]>>({})
+const popupBusy = ref(false)
+const popupChartRef = ref<any>(null)
+
 const LABELS: Record<string,string> = {
   pm25:'PM2.5', pm10:'PM10', temperature:'Temperature', humidity:'Humidity',
   noise:'Noise', illumination:'Illumination', voc:'VOC', o3:'O₃', so2:'SO₂', no2:'NO₂'
 }
 const metricOptions = computed(() => props.rows?.map(r => r.key) || [])
-const popupDays = computed(() => Math.max(1, Math.round(hoursFrom(popupRange.value) / 24)))
 
 function hoursFrom(range: string) {
   if (range.endsWith('h')) return parseInt(range)
@@ -240,23 +249,77 @@ function hoursFrom(range: string) {
   return 24
 }
 function siteIdFor(metric: string) {
-  // th vs voc routing
   const TH = new Set(['pm25','pm10','temperature','humidity','noise','illumination','pressure'])
   return TH.has(metric) ? thSiteOf(props.baseId) : vocSiteOf(props.baseId)
 }
-async function reloadPopup() {
-  popupSeriesByDevice.value = {}
-  const hours = hoursFrom(popupRange.value)
-  const siteId = siteIdFor(popupMetric.value)
-  const resp = await api.getTimeseriesByMetric({ metric: popupMetric.value, siteIds: [siteId], hours })
-  popupSeriesByDevice.value = resp || {}
+
+/* -------------------- Cache for popup series -------------------- */
+const POPUP_VER = 'v1'
+const POPUP_TTL_MS = 15 * 60 * 1000
+const popupKey = (base: string, metric: string, range: string) => `popup:${base}:${metric}:${range}:${POPUP_VER}`
+
+async function readPopupCache(base: string, metric: string, range: string) {
+  const raw = await idbGet(popupKey(base, metric, range))
+  if (!raw) return null
+  // shapes: { data, savedAt } or { seriesByDevice, cachedAt }
+  const data = raw.seriesByDevice ?? raw.data
+  const ts   = raw.cachedAt ?? raw.savedAt ?? 0
+  return { data, ts }
 }
+async function writePopupCache(base: string, metric: string, range: string, seriesByDevice: any) {
+  await idbSet(popupKey(base, metric, range), { seriesByDevice, cachedAt: Date.now() })
+}
+
+/* -------------------- Popup load (cache-first) -------------------- */
+async function reloadPopup(forceNetwork = false) {
+  popupBusy.value = true
+  const base = props.baseId
+  const metric = popupMetric.value
+  const range = popupRange.value
+  const hours = hoursFrom(range)
+  const siteId = siteIdFor(metric)
+
+  try {
+    // 1) Cache-first paint
+    if (!forceNetwork) {
+      const cached = await readPopupCache(base, metric, range)
+      if (cached && (Date.now() - cached.ts) <= POPUP_TTL_MS) {
+        popupSeriesByDevice.value = cached.data || {}
+        await nextTick()
+        // match ComparePanel’s 6h/12h behavior
+        popupChartRef.value?.slideToHours?.(hours)
+      }
+    }
+
+    // 2) Always refresh in background
+    const resp = await api.getTimeseriesByMetric({ metric, siteIds: [siteId], hours })
+    const series = resp || {}
+    popupSeriesByDevice.value = series
+    await writePopupCache(base, metric, range, series)
+
+    await nextTick()
+    popupChartRef.value?.slideToHours?.(hours)
+  } finally {
+    popupBusy.value = false
+  }
+}
+
 function openPopup(fromMetric: string) {
   popupMetric.value = fromMetric
-  popupRange.value = '24h'
-  reloadPopup()
+  popupRange.value = '24h' // default window
+  popupSeriesByDevice.value = {}
+  popupBusy.value = true
   dlg.value?.showModal()
+  // load (cache-first) without blocking the dialog open
+  setTimeout(() => reloadPopup(false), 0)
 }
+
 function closePopup() { dlg.value?.close() }
-watch([popupMetric, popupRange], () => { if (dlg.value?.open) reloadPopup() })
+
+/* Refresh when user changes controls while dialog is open */
+watch([popupMetric, popupRange], async () => {
+  if (dlg.value?.open) {
+    await reloadPopup(false)
+  }
+})
 </script>
