@@ -1,4 +1,4 @@
-// src/services/api.js
+
 import axios from "axios";
 import { MAP_DEVICES, MAP_SITES_V6 } from "@/constants/mapSites";
 import { cacheGet, cacheSet } from "@/utils/idb"; // NEW
@@ -229,19 +229,8 @@ async function mock_getLatestReadings({ hours = 12 } = {}) {
   const sites = await mock_getSites();
   const th = await mock.genTHRows({ start_time, end_time });
   const voc = await mock.genVOCRows({ start_time, end_time });
-  const latest = mock.pickLatestBySite(sites, th, voc);
-
-  const norm = Object.fromEntries(
-    Object.entries(latest).map(([site, raw]) => {
-      if (!raw) return [site, null];
-      const r = site.includes("-TH-") ? mapTHRow(raw) : mapVOCRow(raw);
-      const vals = site.includes("-TH-")
-        ? [r.pm25, r.pm10, r.temperature, r.humidity, r.noise, r.illumination]
-        : [r.voc, r.o3, r.so2, r.no2];
-      return [site, vals.some((v) => v != null) ? r : null];
-    })
-  );
-  return norm;
+  // ⬇️ use as-is; do NOT mapTHRow/mapVOCRow again
+  return mock.pickLatestBySite(sites, th, voc);
 }
 async function mock_getTimeseriesByMetric({ metric, siteIds = [], hours = 24 } = {}) {
   return mock.genTimeseriesByMetric({ metric, siteIds, hours });

@@ -336,6 +336,8 @@ import { ref, onMounted } from 'vue'
 import DevicesMap from '@/components/DevicesMap.vue'
 
 
+
+
 const devices = ref([])
 const center = ref([27.8767, -97.3231])
 const zoom = ref(10)
